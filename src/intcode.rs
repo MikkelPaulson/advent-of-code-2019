@@ -1,7 +1,7 @@
 use std::io::prelude::*;
 use std::str;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Intcode {
     data: Vec<usize>,
     cursor: usize,
