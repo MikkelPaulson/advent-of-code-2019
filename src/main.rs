@@ -32,6 +32,7 @@ impl Puzzle {
     pub fn run(&self, input: Box<dyn io::Read>) -> Result<String, &'static str> {
         match (self.day, self.part) {
             (1, 1) => day1::part1(input),
+            (1, 2) => day1::part2(input),
             _ => Err("That day/part does not yet exist"),
         }
     }
