@@ -3,6 +3,9 @@ use std::io;
 use std::str;
 
 mod day1;
+mod day2;
+
+mod intcode;
 
 fn main() -> Result<(), &'static str> {
     let puzzle: Puzzle = env::args()
@@ -33,6 +36,7 @@ impl Puzzle {
         match (self.day, self.part) {
             (1, 1) => day1::part1(input),
             (1, 2) => day1::part2(input),
+            (2, 1) => day2::part1(input),
             _ => Err("That day/part does not yet exist"),
         }
     }
