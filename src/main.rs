@@ -4,6 +4,7 @@ use std::str;
 
 mod day1;
 mod day2;
+mod day3;
 
 mod intcode;
 
@@ -38,6 +39,7 @@ impl Puzzle {
             (1, 2) => day1::part2(input),
             (2, 1) => day2::part1(input),
             (2, 2) => day2::part2(input),
+            (3, 1) => day3::part1(input),
             _ => Err("That day/part does not yet exist"),
         }
     }
