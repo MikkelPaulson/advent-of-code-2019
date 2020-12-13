@@ -32,9 +32,26 @@ fn parse(input: Box<dyn Read>) -> [Line; 2] {
 }
 
 #[derive(Debug)]
+struct Segment {
+    start: isize,
+    end: isize,
+    distance: isize,
+}
+
+impl Segment {
+    pub fn new(start: isize, end: isize, distance: isize) -> Self {
+        Self {
+            start,
+            end,
+            distance,
+        }
+    }
+}
+
+#[derive(Debug)]
 struct Line {
-    vertical_segments: collections::HashMap<isize, Vec<(isize, isize)>>,
-    horizontal_segments: collections::HashMap<isize, Vec<(isize, isize)>>,
+    vertical_segments: collections::HashMap<isize, Vec<Segment>>,
+    horizontal_segments: collections::HashMap<isize, Vec<Segment>>,
 }
 
 impl Line {
@@ -46,11 +63,13 @@ impl Line {
             (&self.horizontal_segments, &other.vertical_segments),
         ] {
             for (a, segments) in my_segments.iter() {
-                for (my_start, my_end) in segments {
-                    for b in my_start.clone()..=my_end.clone() {
+                for segment in segments {
+                    for b in segment.start.clone()..=segment.end.clone() {
                         if (*a != 0isize || b != 0isize)
                             && your_segments.get(&b).map_or(false, |v| {
-                                v.iter().any(|(min, max)| (min..=max).contains(&a))
+                                v.iter().any(|your_segment| {
+                                    (your_segment.start..=your_segment.end).contains(&a)
+                                })
                             })
                         {
                             overlaps.push((a.clone(), b.clone()));
@@ -73,6 +92,7 @@ impl str::FromStr for Line {
 
         let mut vertical_segments = collections::HashMap::new();
         let mut horizontal_segments = collections::HashMap::new();
+        let mut total_distance = 0;
 
         for segment in raw.trim().split(',') {
             let direction = segment.chars().nth(0).unwrap();
@@ -89,7 +109,11 @@ impl str::FromStr for Line {
                     if !horizontal_segments.contains_key(&y) {
                         horizontal_segments.insert(y, Vec::with_capacity(1));
                     }
-                    horizontal_segments.get_mut(&y).unwrap().push((x, new_x));
+                    horizontal_segments.get_mut(&y).unwrap().push(Segment::new(
+                        x,
+                        new_x,
+                        total_distance,
+                    ));
 
                     x = new_x;
                 }
@@ -103,12 +127,18 @@ impl str::FromStr for Line {
                     if !vertical_segments.contains_key(&x) {
                         vertical_segments.insert(x, Vec::with_capacity(1));
                     }
-                    vertical_segments.get_mut(&x).unwrap().push((y, new_y));
+                    vertical_segments.get_mut(&x).unwrap().push(Segment::new(
+                        y,
+                        new_y,
+                        total_distance,
+                    ));
 
                     y = new_y;
                 }
                 _ => return Err("Invalid direction."),
             }
+
+            total_distance += distance;
         }
 
         Ok(Self {
