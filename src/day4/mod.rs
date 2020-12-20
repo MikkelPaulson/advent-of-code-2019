@@ -1,8 +1,18 @@
+use regex::Regex;
 use std::io;
 use std::io::prelude::*;
 use std::str;
 
 pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    evaluate(input, Regex::new("00|11|22|33|44|55|66|77|88|99").unwrap())
+}
+
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    // Worst regex ever, but the Rust crate doesn't support backreferences.
+    evaluate(input, Regex::new("([^0]|^)00([^0]|$)|([^1]|^)11([^1]|$)|([^2]|^)22([^2]|$)|([^3]|^)33([^3]|$)|([^4]|^)44([^4]|$)|([^5]|^)55([^5]|$)|([^6]|^)66([^6]|$)|([^7]|^)77([^7]|$)|([^8]|^)88([^8]|$)|([^9]|^)99([^9]|$)").unwrap())
+}
+
+pub fn evaluate(input: Box<dyn Read>, pattern: Regex) -> Result<usize, &'static str> {
     let [lower, upper] = parse(input);
     println!("{:?}", lower);
     println!("{:?}", upper);
@@ -19,11 +29,13 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
                     for e in d..='9' {
                         for f in e..='9' {
                             test_count += 1;
-                            if a != b && b != c && c != d && d != e && e != f {
+                            let test_string = format!("{}{}{}{}{}{}", a, b, c, d, e, f);
+
+                            if !pattern.is_match(&test_string) {
                                 continue;
                             }
 
-                            match format!("{}{}{}{}{}{}", a, b, c, d, e, f).parse::<usize>() {
+                            match test_string.parse::<usize>() {
                                 Ok(i) if i < lower_val => continue,
                                 Ok(i) if i > upper_val => {
                                     println!("Tests: {:?}", test_count);
