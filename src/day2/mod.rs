@@ -2,7 +2,7 @@ use crate::intcode::Intcode;
 use std::io::prelude::*;
 use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let mut intcode = Intcode::parse(input);
 
     intcode.set(1, 12);
@@ -10,10 +10,10 @@ pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
 
     intcode.run();
 
-    Ok(intcode.get(0).to_string())
+    Ok(intcode.get(0))
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let clean_intcode = Intcode::parse(input);
 
     for noun in 0..100 {
@@ -26,7 +26,7 @@ pub fn part2(input: Box<dyn Read>) -> Result<String, &'static str> {
             intcode.run();
 
             if intcode.get(0) == 19690720 {
-                return Ok((100 * noun + verb).to_string());
+                return Ok(100 * noun + verb);
             }
         }
     }

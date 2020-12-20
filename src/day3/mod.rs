@@ -3,27 +3,27 @@ use std::io;
 use std::io::prelude::*;
 use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let lines = parse(input);
     let intersections = lines[0].plot_intersections(&lines[1]);
 
     if intersections.is_empty() {
         Err("No intersections found!")
     } else {
-        let mut min_distance = isize::MAX;
+        let mut min_distance = usize::MAX;
 
         for (x, y, _) in intersections {
-            let distance = x.abs() + y.abs();
+            let distance = (x.abs() + y.abs()) as usize;
             if distance > 0 && distance < min_distance {
                 min_distance = distance;
             }
         }
 
-        Ok(min_distance.to_string())
+        Ok(min_distance)
     }
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let lines = parse(input);
     let intersections = lines[0].plot_intersections(&lines[1]);
 
@@ -33,9 +33,8 @@ pub fn part2(input: Box<dyn Read>) -> Result<String, &'static str> {
         println!("{:?}", intersections);
         intersections
             .iter()
-            .map(|(_, _, distance)| distance)
+            .map(|(_, _, distance)| *distance)
             .min()
-            .map(|distance| distance.to_string())
             .ok_or("Not OK!")
     }
 }
@@ -52,11 +51,11 @@ fn parse(input: Box<dyn Read>) -> [Line; 2] {
 struct Segment {
     start: isize,
     end: isize,
-    distance: isize,
+    distance: usize,
 }
 
 impl Segment {
-    pub fn new(start: isize, end: isize, distance: isize) -> Self {
+    pub fn new(start: isize, end: isize, distance: usize) -> Self {
         Self {
             start,
             end,
@@ -72,7 +71,7 @@ struct Line {
 }
 
 impl Line {
-    fn plot_intersections(&self, other: &Line) -> Vec<(isize, isize, isize)> {
+    fn plot_intersections(&self, other: &Line) -> Vec<(isize, isize, usize)> {
         let mut overlaps = Vec::new();
         println!("{:?}", self);
         println!("{:?}", other);
@@ -102,17 +101,17 @@ impl Line {
                                             your_segment.end,
                                             your_segment.distance,
                                             my_segment.distance
-                                                + (b - my_segment.start).abs()
+                                                + (b - my_segment.start).abs() as usize
                                                 + your_segment.distance
-                                                + (a - your_segment.start).abs(),
+                                                + (a - your_segment.start).abs() as usize,
                                         );
                                         overlaps.push((
                                             a.clone(),
                                             b.clone(),
                                             my_segment.distance
-                                                + (b - my_segment.start).abs()
+                                                + (b - my_segment.start).abs() as usize
                                                 + your_segment.distance
-                                                + (a - your_segment.start).abs(),
+                                                + (a - your_segment.start).abs() as usize,
                                         ));
                                     }
                                 }
@@ -182,7 +181,7 @@ impl str::FromStr for Line {
                 _ => return Err("Invalid direction."),
             }
 
-            total_distance += distance;
+            total_distance += *distance as usize;
         }
 
         Ok(Self {

@@ -1,20 +1,20 @@
 use std::io;
 use std::io::prelude::*;
 
-pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let mut sum = 0;
     for mass in parse(input) {
         sum += calc_fuel_simple(mass).unwrap();
     }
-    Ok(sum.to_string())
+    Ok(sum)
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let mut sum = 0;
     for mass in parse(input) {
         sum += calc_fuel(mass);
     }
-    Ok(sum.to_string())
+    Ok(sum)
 }
 
 fn calc_fuel(mass: usize) -> usize {

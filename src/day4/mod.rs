@@ -2,7 +2,7 @@ use std::io;
 use std::io::prelude::*;
 use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
+pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let [lower, upper] = parse(input);
     println!("{:?}", lower);
     println!("{:?}", upper);
@@ -27,7 +27,7 @@ pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
                                 Ok(i) if i < lower_val => continue,
                                 Ok(i) if i > upper_val => {
                                     println!("Tests: {:?}", test_count);
-                                    return Ok(match_count.to_string());
+                                    return Ok(match_count);
                                 }
                                 _ => {}
                             }
@@ -40,7 +40,7 @@ pub fn part1(input: Box<dyn Read>) -> Result<String, &'static str> {
         }
     }
 
-    Ok(String::new())
+    Ok(match_count)
 }
 
 fn parse(input: Box<dyn Read>) -> [String; 2] {
