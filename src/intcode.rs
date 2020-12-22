@@ -45,6 +45,10 @@ impl Intcode {
             2 => self.do_mul(),
             3 => self.do_input(),
             4 => self.do_output(),
+            5 => self.do_jump_if_true(),
+            6 => self.do_jump_if_false(),
+            7 => self.do_less_than(),
+            8 => self.do_equals(),
             99 => self.do_halt(),
             _ => panic!(
                 "Unknown opcode {} at offset {}!",
@@ -87,6 +91,60 @@ impl Intcode {
     fn do_output(&mut self) -> bool {
         self.output.push(self.get_param(0));
         self.cursor += 2;
+        true
+    }
+
+    /// Opcode 5 is jump-if-true: if the first parameter is non-zero, it sets the instruction
+    /// pointer to the value from the second parameter. Otherwise, it does nothing.
+    fn do_jump_if_true(&mut self) -> bool {
+        self.cursor = if self.get_param(0) != 0 {
+            self.get_param(1) as usize
+        } else {
+            self.cursor + 3
+        };
+
+        true
+    }
+
+    /// Opcode 6 is jump-if-false: if the first parameter is zero, it sets the instruction pointer
+    /// to the value from the second parameter. Otherwise, it does nothing.
+    fn do_jump_if_false(&mut self) -> bool {
+        self.cursor = if self.get_param(0) == 0 {
+            self.get_param(1) as usize
+        } else {
+            self.cursor + 3
+        };
+
+        true
+    }
+
+    /// Opcode 7 is less than: if the first parameter is less than the second parameter, it stores
+    /// 1 in the position given by the third parameter. Otherwise, it stores 0.
+    fn do_less_than(&mut self) -> bool {
+        self.set_pos(
+            2,
+            if self.get_param(0) < self.get_param(1) {
+                1
+            } else {
+                0
+            },
+        );
+        self.cursor += 4;
+        true
+    }
+
+    /// Opcode 8 is equals: if the first parameter is equal to the second parameter, it stores 1 in
+    /// the position given by the third parameter. Otherwise, it stores 0.
+    fn do_equals(&mut self) -> bool {
+        self.set_pos(
+            2,
+            if self.get_param(0) == self.get_param(1) {
+                1
+            } else {
+                0
+            },
+        );
+        self.cursor += 4;
         true
     }
 
@@ -214,5 +272,90 @@ mod test {
         assert_eq!(99, intcode.data[4]);
 
         assert_eq!(false, intcode.step());
+    }
+
+    #[test]
+    fn day5_example4() {
+        for i in 6..=10 {
+            let mut intcode = Intcode::new(vec![3, 9, 8, 9, 10, 9, 4, 9, 99, -1, 8]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(vec![if i == 8 { 1 } else { 0 }], intcode.output);
+        }
+    }
+
+    #[test]
+    fn day5_example5() {
+        for i in 6..=10 {
+            let mut intcode = Intcode::new(vec![3, 9, 7, 9, 10, 9, 4, 9, 99, -1, 8]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(vec![if i < 8 { 1 } else { 0 }], intcode.output);
+        }
+    }
+
+    #[test]
+    fn day5_example6() {
+        for i in 6..=10 {
+            let mut intcode = Intcode::new(vec![3, 3, 1108, -1, 8, 3, 4, 3, 99]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(vec![if i == 8 { 1 } else { 0 }], intcode.output);
+        }
+    }
+
+    #[test]
+    fn day5_example7() {
+        for i in 6..=10 {
+            let mut intcode = Intcode::new(vec![3, 3, 1107, -1, 8, 3, 4, 3, 99]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(vec![if i < 8 { 1 } else { 0 }], intcode.output);
+        }
+    }
+
+    #[test]
+    fn day5_example8() {
+        for i in -2..=2 {
+            let mut intcode = Intcode::new(vec![
+                3, 12, 6, 12, 15, 1, 13, 14, 13, 4, 13, 99, -1, 0, 1, 9,
+            ]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(vec![if i == 0 { 0 } else { 1 }], intcode.output);
+        }
+    }
+
+    #[test]
+    fn day5_example9() {
+        for i in -2..=2 {
+            let mut intcode = Intcode::new(vec![3, 3, 1105, -1, 9, 1101, 0, 0, 12, 4, 12, 99, 1]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(vec![if i == 0 { 0 } else { 1 }], intcode.output);
+        }
+    }
+
+    #[test]
+    fn day5_example10() {
+        for i in 6..=10 {
+            let mut intcode = Intcode::new(vec![
+                3, 21, 1008, 21, 8, 20, 1005, 20, 22, 107, 8, 21, 20, 1006, 20, 31, 1106, 0, 36,
+                98, 0, 0, 1002, 21, 125, 20, 4, 20, 1105, 1, 46, 104, 999, 1105, 1, 46, 1101, 1000,
+                1, 20, 4, 20, 1105, 1, 46, 98, 99,
+            ]);
+            intcode.input.push(i);
+            intcode.run();
+            assert_eq!(
+                vec![if i < 8 {
+                    999
+                } else if i == 8 {
+                    1000
+                } else {
+                    1001
+                }],
+                intcode.output
+            );
+        }
     }
 }
