@@ -158,17 +158,16 @@ impl Intcode {
 
         match Self::get_mode(self.data[self.cursor] as usize, param_index) {
             // Position mode - interpret as pointer.
-            0 => self.data[param as usize],
+            InstructionMode::Position => self.data[param as usize],
 
             // Immediate mode - interpret as value.
-            1 => param,
-
-            x => panic!("Unrecognized mode: {}", x),
+            InstructionMode::Immediate => param,
         }
     }
 
     fn set_pos(&mut self, param_index: usize, value: isize) {
-        if Self::get_mode(self.data[self.cursor] as usize, param_index) != 0 {
+        if Self::get_mode(self.data[self.cursor] as usize, param_index) != InstructionMode::Position
+        {
             panic!("Output parameters must never be in immedate mode!");
         }
 
@@ -176,8 +175,8 @@ impl Intcode {
         self.data[pos] = value;
     }
 
-    fn get_mode(instruction: usize, param_index: usize) -> usize {
-        (instruction as u32 / 10u32.pow(param_index as u32 + 2) % 10) as usize
+    fn get_mode(instruction: usize, param_index: usize) -> InstructionMode {
+        InstructionMode::from(instruction as u32 / 10u32.pow(param_index as u32 + 2) % 10)
     }
 }
 
@@ -193,16 +192,31 @@ impl str::FromStr for Intcode {
     }
 }
 
+#[derive(Debug, PartialEq)]
+enum InstructionMode {
+    Position,
+    Immediate,
+}
+
+impl From<u32> for InstructionMode {
+    fn from(value: u32) -> Self {
+        match value {
+            0 => InstructionMode::Position,
+            1 => InstructionMode::Immediate,
+            x => panic!("Unrecognized mode: {}", x),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
     fn get_mode() {
-        assert_eq!(0, Intcode::get_mode(12001, 0));
-        assert_eq!(2, Intcode::get_mode(12001, 1));
-        assert_eq!(1, Intcode::get_mode(12001, 2));
-        assert_eq!(0, Intcode::get_mode(12001, 3));
+        assert_eq!(InstructionMode::Position, Intcode::get_mode(12001, 0));
+        assert_eq!(InstructionMode::Immediate, Intcode::get_mode(12001, 2));
+        assert_eq!(InstructionMode::Position, Intcode::get_mode(12001, 3));
     }
 
     #[test]
