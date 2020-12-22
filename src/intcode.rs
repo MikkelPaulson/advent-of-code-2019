@@ -47,14 +47,7 @@ impl Intcode {
             // positions from which you should read the input values, and the third
             // indicates the position at which the output should be stored.
             1 => {
-                let (a_pos, b_pos, o_pos) = (
-                    self.data[self.cursor + 1] as usize,
-                    self.data[self.cursor + 2] as usize,
-                    self.data[self.cursor + 3] as usize,
-                );
-
-                self.data[o_pos] = self.data[a_pos] + self.data[b_pos];
-
+                self.set_pos(2, self.get_param(0) + self.get_param(1));
                 self.cursor += 4;
             }
 
@@ -62,14 +55,7 @@ impl Intcode {
             // instead of adding them. Again, the three integers after the opcode
             // indicate where the inputs and outputs are, not their values.
             2 => {
-                let (a_pos, b_pos, o_pos) = (
-                    self.data[self.cursor + 1] as usize,
-                    self.data[self.cursor + 2] as usize,
-                    self.data[self.cursor + 3] as usize,
-                );
-
-                self.data[o_pos] = self.data[a_pos] * self.data[b_pos];
-
+                self.set_pos(2, self.get_param(0) * self.get_param(1));
                 self.cursor += 4;
             }
 
@@ -77,16 +63,15 @@ impl Intcode {
             // by its only parameter. For example, the instruction 3,50 would take an
             // input value and store it at address 50.
             3 => {
-                let pos = self.data[self.cursor + 1] as usize;
-                self.data[pos] = self.input.remove(0);
+                let value = self.input.remove(0);
+                self.set_pos(0, value);
                 self.cursor += 2;
             }
 
             // Opcode 4 outputs the value of its only parameter. For example, the
             // instruction 4,50 would output the value at address 50.
             4 => {
-                let pos = self.data[self.cursor + 1] as usize;
-                self.output.push(self.data[pos]);
+                self.output.push(self.get_param(0));
                 self.cursor += 2;
             }
 
@@ -94,11 +79,38 @@ impl Intcode {
             99 => return false,
 
             _ => panic!(
-                "Invalid opcode {:?} at offset {:?}",
+                "Unknown opcode {} at offset {}!",
                 self.data[self.cursor], self.cursor,
             ),
         }
         true
+    }
+
+    fn get_param(&self, param_index: usize) -> isize {
+        let param = self.data[self.cursor + param_index + 1];
+
+        match Self::get_mode(self.data[self.cursor] as usize, param_index) {
+            // Position mode - interpret as pointer.
+            0 => self.data[param as usize],
+
+            // Immediate mode - interpret as value.
+            1 => param,
+
+            x => panic!("Unrecognized mode: {}", x),
+        }
+    }
+
+    fn set_pos(&mut self, param_index: usize, value: isize) {
+        if Self::get_mode(self.data[self.cursor] as usize, param_index) != 0 {
+            panic!("Output parameters must never be in immedate mode!");
+        }
+
+        let pos = self.data[self.cursor + param_index + 1] as usize;
+        self.data[pos] = value;
+    }
+
+    fn get_mode(instruction: usize, param_index: usize) -> usize {
+        (instruction as u32 / 10u32.pow(param_index as u32 + 2) % 10) as usize
     }
 }
 
@@ -119,7 +131,15 @@ mod test {
     use super::*;
 
     #[test]
-    fn day2_example() {
+    fn get_mode() {
+        assert_eq!(0, Intcode::get_mode(12001, 0));
+        assert_eq!(2, Intcode::get_mode(12001, 1));
+        assert_eq!(1, Intcode::get_mode(12001, 2));
+        assert_eq!(0, Intcode::get_mode(12001, 3));
+    }
+
+    #[test]
+    fn day2_example1() {
         let mut intcode = Intcode::new(vec![1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50]);
 
         assert!(intcode.step());
@@ -160,10 +180,30 @@ mod test {
     }
 
     #[test]
-    fn day5_example() {
+    fn day5_example1() {
         let mut intcode = Intcode::new(vec![3, 0, 4, 0, 99]);
         intcode.input.push(123);
         intcode.run();
         assert_eq!(vec![123], intcode.output);
+    }
+
+    #[test]
+    fn day5_example2() {
+        let mut intcode = Intcode::new(vec![1002, 4, 3, 4, 33]);
+
+        assert!(intcode.step());
+        assert_eq!(99, intcode.data[4]);
+
+        assert_eq!(false, intcode.step());
+    }
+
+    #[test]
+    fn day5_example3() {
+        let mut intcode = Intcode::new(vec![1101, 100, -1, 4, 0]);
+
+        assert!(intcode.step());
+        assert_eq!(99, intcode.data[4]);
+
+        assert_eq!(false, intcode.step());
     }
 }
