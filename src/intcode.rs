@@ -7,6 +7,7 @@ pub struct Intcode {
     pub input: Vec<isize>,
     pub output: Vec<isize>,
     cursor: usize,
+    relative_base: isize,
 }
 
 impl Intcode {
@@ -16,6 +17,7 @@ impl Intcode {
             input: Vec::new(),
             output: Vec::new(),
             cursor: 0,
+            relative_base: 0,
         }
     }
 
@@ -26,11 +28,14 @@ impl Intcode {
     }
 
     pub fn set(&mut self, offset: usize, value: isize) {
+        if offset >= self.data.len() {
+            self.data.resize(offset + 1, 0);
+        }
         self.data[offset] = value;
     }
 
     pub fn get(&self, offset: usize) -> isize {
-        self.data[offset]
+        self.data.get(offset).map_or(0, |v| *v)
     }
 
     pub fn run(&mut self) {
@@ -38,7 +43,7 @@ impl Intcode {
     }
 
     pub fn step(&mut self) -> bool {
-        let opcode = self.data[self.cursor] % 100;
+        let opcode = self.get(self.cursor) % 100;
 
         match opcode {
             1 => self.do_add(),
@@ -49,10 +54,12 @@ impl Intcode {
             6 => self.do_jump_if_false(),
             7 => self.do_less_than(),
             8 => self.do_equals(),
+            9 => self.do_adjust_relative_base(),
             99 => self.do_halt(),
             _ => panic!(
                 "Unknown opcode {} at offset {}!",
-                self.data[self.cursor], self.cursor,
+                self.get(self.cursor),
+                self.cursor,
             ),
         }
     }
@@ -148,31 +155,52 @@ impl Intcode {
         true
     }
 
+    /// Opcode 9 adjusts the relative base by the value of its only parameter. The relative
+    /// base increases (or decreases, if the value is negative) by the value of the parameter.
+    fn do_adjust_relative_base(&mut self) -> bool {
+        let value = self.get_param(0);
+        self.relative_base += value;
+        self.cursor += 2;
+        true
+    }
+
     /// 99 means that the program is finished and should immediately halt.
     fn do_halt(&mut self) -> bool {
         false
     }
 
     fn get_param(&self, param_index: usize) -> isize {
-        let param = self.data[self.cursor + param_index + 1];
+        let param = self.get(self.cursor + param_index + 1);
 
-        match Self::get_mode(self.data[self.cursor] as usize, param_index) {
+        match Self::get_mode(self.get(self.cursor) as usize, param_index) {
             // Position mode - interpret as pointer.
-            InstructionMode::Position => self.data[param as usize],
+            InstructionMode::Position => self.get(param as usize),
 
             // Immediate mode - interpret as value.
             InstructionMode::Immediate => param,
+
+            // Relative mode - interpret as relative to the defined base.
+            InstructionMode::Relative => self.get((param + self.relative_base) as usize),
         }
     }
 
     fn set_pos(&mut self, param_index: usize, value: isize) {
-        if Self::get_mode(self.data[self.cursor] as usize, param_index) != InstructionMode::Position
-        {
-            panic!("Output parameters must never be in immedate mode!");
-        }
+        let pos = match Self::get_mode(self.get(self.cursor) as usize, param_index) {
+            // Position mode - interpret as pointer.
+            InstructionMode::Position => self.get(self.cursor + param_index + 1) as usize,
 
-        let pos = self.data[self.cursor + param_index + 1] as usize;
-        self.data[pos] = value;
+            // Immediate mode - interpret as value.
+            InstructionMode::Immediate => {
+                panic!("Output parameters must never be in immediate mode!")
+            }
+
+            // Relative mode - interpret as relative to the defined base.
+            InstructionMode::Relative => {
+                (self.get(self.cursor + param_index + 1) + self.relative_base) as usize
+            }
+        };
+
+        self.set(pos, value);
     }
 
     fn get_mode(instruction: usize, param_index: usize) -> InstructionMode {
@@ -196,6 +224,7 @@ impl str::FromStr for Intcode {
 enum InstructionMode {
     Position,
     Immediate,
+    Relative,
 }
 
 impl From<u32> for InstructionMode {
@@ -203,6 +232,7 @@ impl From<u32> for InstructionMode {
         match value {
             0 => InstructionMode::Position,
             1 => InstructionMode::Immediate,
+            2 => InstructionMode::Relative,
             x => panic!("Unrecognized mode: {}", x),
         }
     }
@@ -371,5 +401,40 @@ mod test {
                 intcode.output
             );
         }
+    }
+
+    #[test]
+    fn day9_example1() {
+        let mut intcode = Intcode::new(vec![
+            109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99,
+        ]);
+        intcode.run();
+        assert_eq!(
+            vec![109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99],
+            intcode.output,
+        );
+    }
+
+    #[test]
+    fn day9_example2() {
+        let mut intcode = Intcode::new(vec![1102, 34915192, 34915192, 7, 4, 7, 99, 0]);
+        intcode.run();
+        assert_eq!(1, intcode.output.len());
+        assert_eq!(16, format!("{}", intcode.output[0]).len());
+    }
+
+    #[test]
+    fn day9_example3() {
+        let mut intcode = Intcode::new(vec![104, 1125899906842624, 99]);
+        intcode.run();
+        assert_eq!(vec![1125899906842624], intcode.output);
+    }
+
+    #[test]
+    fn test_input_relative() {
+        let mut intcode = Intcode::new(vec![109, -1, 203, 1, 99]);
+        intcode.input.push(123);
+        intcode.run();
+        assert_eq!(vec![123, -1, 203, 1, 99], intcode.data);
     }
 }
