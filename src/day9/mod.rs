@@ -12,3 +12,14 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
 
     intcode.output.pop().ok_or("No output").map(|n| n as usize)
 }
+
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    let mut intcode = Intcode::parse(input);
+
+    intcode.input.push(2);
+    intcode.run();
+
+    println!("Output: {:?}", intcode.output);
+
+    intcode.output.pop().ok_or("No output").map(|n| n as usize)
+}
