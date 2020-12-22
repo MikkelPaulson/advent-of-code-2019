@@ -10,7 +10,7 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
 
     intcode.run();
 
-    Ok(intcode.get(0))
+    Ok(intcode.get(0) as usize)
 }
 
 pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
@@ -26,7 +26,7 @@ pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
             intcode.run();
 
             if intcode.get(0) == 19690720 {
-                return Ok(100 * noun + verb);
+                return Ok((100 * noun + verb) as usize);
             }
         }
     }

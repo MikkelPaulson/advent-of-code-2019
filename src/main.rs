@@ -6,6 +6,7 @@ mod day1;
 mod day2;
 mod day3;
 mod day4;
+mod day5;
 
 mod intcode;
 
@@ -44,6 +45,7 @@ impl Puzzle {
             (3, 2) => day3::part2(input),
             (4, 1) => day4::part1(input),
             (4, 2) => day4::part2(input),
+            (5, 1) => day5::part1(input),
             _ => Err("That day/part does not yet exist"),
         }
     }
