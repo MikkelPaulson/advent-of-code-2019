@@ -41,49 +41,58 @@ impl Intcode {
         let opcode = self.data[self.cursor] % 100;
 
         match opcode {
-            // Opcode 1 adds together numbers read from two positions and stores the
-            // result in a third position. The three integers immediately after the
-            // opcode tell you these three positions - the first two indicate the
-            // positions from which you should read the input values, and the third
-            // indicates the position at which the output should be stored.
-            1 => {
-                self.set_pos(2, self.get_param(0) + self.get_param(1));
-                self.cursor += 4;
-            }
-
-            // Opcode 2 works exactly like opcode 1, except it multiplies the two inputs
-            // instead of adding them. Again, the three integers after the opcode
-            // indicate where the inputs and outputs are, not their values.
-            2 => {
-                self.set_pos(2, self.get_param(0) * self.get_param(1));
-                self.cursor += 4;
-            }
-
-            // Opcode 3 takes a single integer as input and saves it to the position given
-            // by its only parameter. For example, the instruction 3,50 would take an
-            // input value and store it at address 50.
-            3 => {
-                let value = self.input.remove(0);
-                self.set_pos(0, value);
-                self.cursor += 2;
-            }
-
-            // Opcode 4 outputs the value of its only parameter. For example, the
-            // instruction 4,50 would output the value at address 50.
-            4 => {
-                self.output.push(self.get_param(0));
-                self.cursor += 2;
-            }
-
-            // 99 means that the program is finished and should immediately halt.
-            99 => return false,
-
+            1 => self.do_add(),
+            2 => self.do_mul(),
+            3 => self.do_input(),
+            4 => self.do_output(),
+            99 => self.do_halt(),
             _ => panic!(
                 "Unknown opcode {} at offset {}!",
                 self.data[self.cursor], self.cursor,
             ),
         }
+    }
+
+    /// Opcode 1 adds together numbers read from two positions and stores the result in a third
+    /// position. The three integers immediately after the opcode tell you these three
+    /// positions - the first two indicate the positions from which you should read the input
+    /// values, and the third indicates the position at which the output should be stored.
+    fn do_add(&mut self) -> bool {
+        self.set_pos(2, self.get_param(0) + self.get_param(1));
+        self.cursor += 4;
         true
+    }
+
+    /// Opcode 2 works exactly like opcode 1, except it multiplies the two inputs instead of
+    /// adding them. Again, the three integers after the opcode indicate where the inputs and
+    /// outputs are, not their values.
+    fn do_mul(&mut self) -> bool {
+        self.set_pos(2, self.get_param(0) * self.get_param(1));
+        self.cursor += 4;
+        true
+    }
+
+    /// Opcode 3 takes a single integer as input and saves it to the position given
+    /// by its only parameter. For example, the instruction 3,50 would take an
+    /// input value and store it at address 50.
+    fn do_input(&mut self) -> bool {
+        let value = self.input.remove(0);
+        self.set_pos(0, value);
+        self.cursor += 2;
+        true
+    }
+
+    /// Opcode 4 outputs the value of its only parameter. For example, the
+    /// instruction 4,50 would output the value at address 50.
+    fn do_output(&mut self) -> bool {
+        self.output.push(self.get_param(0));
+        self.cursor += 2;
+        true
+    }
+
+    /// 99 means that the program is finished and should immediately halt.
+    fn do_halt(&mut self) -> bool {
+        false
     }
 
     fn get_param(&self, param_index: usize) -> isize {
