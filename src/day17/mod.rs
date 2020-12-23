@@ -5,7 +5,8 @@ use std::str;
 pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let mut intcode = Intcode::parse(input);
     intcode.run();
-    let map = String::from_utf8(intcode.output.iter().map(|c| *c as u8).collect()).unwrap();
+
+    let map = intcode.output_string();
 
     println!("{}", map);
     println!("{:?}", get_intersections(&map));
@@ -14,6 +15,31 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
         .iter()
         .map(|(row, col)| row * col)
         .sum())
+}
+
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    let mut intcode = Intcode::parse(input);
+    intcode.set(0, 2);
+
+    // Main movement routine
+    intcode.input_str(&"A,A,B,C,B,C,B,C,B,A\n");
+
+    // Function A
+    intcode.input_str(&"R,10,L,12,R,6\n");
+
+    // Function B
+    intcode.input_str(&"R,6,R,10,R,12,R,6\n");
+
+    // Function C
+    intcode.input_str(&"R,10,L,12,L,12\n");
+
+    // "Continuous video feed"
+    intcode.input_str(&"n\n");
+    intcode.run();
+
+    let result = intcode.output.pop().map(|i| i as usize).ok_or("No output.");
+    println!("{}", intcode.output_string());
+    result
 }
 
 fn get_intersections(map: &str) -> Vec<(usize, usize)> {

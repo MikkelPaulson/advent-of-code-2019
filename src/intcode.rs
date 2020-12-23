@@ -3,7 +3,7 @@ use std::str;
 
 #[derive(Clone, Debug)]
 pub struct Intcode {
-    data: Vec<isize>,
+    pub data: Vec<isize>,
     pub input: Vec<isize>,
     pub output: Vec<isize>,
     cursor: usize,
@@ -19,6 +19,15 @@ impl Intcode {
             cursor: 0,
             relative_base: 0,
         }
+    }
+
+    pub fn input_str(&mut self, data: &str) {
+        self.input.reserve(data.len());
+        data.chars().for_each(|c| self.input.push(c as isize));
+    }
+
+    pub fn output_string(&self) -> String {
+        self.output.iter().map(|c| (*c as u8) as char).collect()
     }
 
     pub fn parse(mut input: Box<dyn Read>) -> Self {

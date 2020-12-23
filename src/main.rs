@@ -52,6 +52,7 @@ impl Puzzle {
             (9, 1) => day9::part1(input),
             (9, 2) => day9::part2(input),
             (17, 1) => day17::part1(input),
+            (17, 2) => day17::part2(input),
             _ => Err("That day/part does not yet exist"),
         }
     }
