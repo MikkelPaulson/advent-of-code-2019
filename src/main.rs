@@ -3,6 +3,7 @@ use std::io;
 use std::str;
 
 mod day1;
+mod day17;
 mod day2;
 mod day3;
 mod day4;
@@ -50,6 +51,7 @@ impl Puzzle {
             (5, 2) => day5::part2(input),
             (9, 1) => day9::part1(input),
             (9, 2) => day9::part2(input),
+            (17, 1) => day17::part1(input),
             _ => Err("That day/part does not yet exist"),
         }
     }
