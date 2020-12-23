@@ -96,10 +96,14 @@ impl Intcode {
     /// by its only parameter. For example, the instruction 3,50 would take an
     /// input value and store it at address 50.
     fn do_input(&mut self) -> bool {
-        let value = self.input.remove(0);
-        self.set_pos(0, value);
-        self.cursor += 2;
-        true
+        if self.input.is_empty() {
+            false
+        } else {
+            let value = self.input.remove(0);
+            self.set_pos(0, value);
+            self.cursor += 2;
+            true
+        }
     }
 
     /// Opcode 4 outputs the value of its only parameter. For example, the

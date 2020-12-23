@@ -1,0 +1,20 @@
+                       | 0 Hull Breach
+   N                   | 1 Holodeck -- INFINITE LOOP
+  W+E                  | 2 Corridor
+   S                   | 3 Crew Quarters
+                       | 4 Storage
+                       | 5 Kitchen
+                       | 6 Warp Drive Maintenance
+                       | 7 Stables
+   e-d-c               | 8 Observatory
+       |               | 9 Hallway
+       a-8-9   g       | a Arcade
+       | |     |       | b Science Lab
+       b 7-----f       | c Navigation
+         |     |       | d Hot Chocolate Fountain
+     6-5-0 3-4 h-i     | e Security Checkpoint
+         | |           | f Gift Wrapping Center -- candy cane
+         |-2           | g Sick Bay -- PHOTONS
+         |             | h Engineering -- hypercube
+       2-1             | i Passages -- empty
+                       |
