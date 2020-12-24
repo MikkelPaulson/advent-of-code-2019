@@ -47,11 +47,15 @@ impl Intcode {
         self.data.get(offset).map_or(0, |v| *v)
     }
 
-    pub fn run(&mut self) {
-        while self.step() {}
+    pub fn run(&mut self) -> Response {
+        loop {
+            if let Some(result) = self.step() {
+                break result;
+            }
+        }
     }
 
-    pub fn step(&mut self) -> bool {
+    pub fn step(&mut self) -> Option<Response> {
         let opcode = self.get(self.cursor) % 100;
 
         match opcode {
@@ -77,70 +81,70 @@ impl Intcode {
     /// position. The three integers immediately after the opcode tell you these three
     /// positions - the first two indicate the positions from which you should read the input
     /// values, and the third indicates the position at which the output should be stored.
-    fn do_add(&mut self) -> bool {
+    fn do_add(&mut self) -> Option<Response> {
         self.set_pos(2, self.get_param(0) + self.get_param(1));
         self.cursor += 4;
-        true
+        None
     }
 
     /// Opcode 2 works exactly like opcode 1, except it multiplies the two inputs instead of
     /// adding them. Again, the three integers after the opcode indicate where the inputs and
     /// outputs are, not their values.
-    fn do_mul(&mut self) -> bool {
+    fn do_mul(&mut self) -> Option<Response> {
         self.set_pos(2, self.get_param(0) * self.get_param(1));
         self.cursor += 4;
-        true
+        None
     }
 
     /// Opcode 3 takes a single integer as input and saves it to the position given
     /// by its only parameter. For example, the instruction 3,50 would take an
     /// input value and store it at address 50.
-    fn do_input(&mut self) -> bool {
+    fn do_input(&mut self) -> Option<Response> {
         if self.input.is_empty() {
-            false
+            Some(Response::InputRequired)
         } else {
             let value = self.input.remove(0);
             self.set_pos(0, value);
             self.cursor += 2;
-            true
+            None
         }
     }
 
     /// Opcode 4 outputs the value of its only parameter. For example, the
     /// instruction 4,50 would output the value at address 50.
-    fn do_output(&mut self) -> bool {
+    fn do_output(&mut self) -> Option<Response> {
         self.output.push(self.get_param(0));
         self.cursor += 2;
-        true
+        None
     }
 
     /// Opcode 5 is jump-if-true: if the first parameter is non-zero, it sets the instruction
     /// pointer to the value from the second parameter. Otherwise, it does nothing.
-    fn do_jump_if_true(&mut self) -> bool {
+    fn do_jump_if_true(&mut self) -> Option<Response> {
         self.cursor = if self.get_param(0) != 0 {
             self.get_param(1) as usize
         } else {
             self.cursor + 3
         };
 
-        true
+        None
     }
 
     /// Opcode 6 is jump-if-false: if the first parameter is zero, it sets the instruction pointer
     /// to the value from the second parameter. Otherwise, it does nothing.
-    fn do_jump_if_false(&mut self) -> bool {
+    fn do_jump_if_false(&mut self) -> Option<Response> {
         self.cursor = if self.get_param(0) == 0 {
             self.get_param(1) as usize
         } else {
             self.cursor + 3
         };
 
-        true
+        None
     }
 
     /// Opcode 7 is less than: if the first parameter is less than the second parameter, it stores
     /// 1 in the position given by the third parameter. Otherwise, it stores 0.
-    fn do_less_than(&mut self) -> bool {
+    fn do_less_than(&mut self) -> Option<Response> {
         self.set_pos(
             2,
             if self.get_param(0) < self.get_param(1) {
@@ -150,12 +154,12 @@ impl Intcode {
             },
         );
         self.cursor += 4;
-        true
+        None
     }
 
     /// Opcode 8 is equals: if the first parameter is equal to the second parameter, it stores 1 in
     /// the position given by the third parameter. Otherwise, it stores 0.
-    fn do_equals(&mut self) -> bool {
+    fn do_equals(&mut self) -> Option<Response> {
         self.set_pos(
             2,
             if self.get_param(0) == self.get_param(1) {
@@ -165,21 +169,21 @@ impl Intcode {
             },
         );
         self.cursor += 4;
-        true
+        None
     }
 
     /// Opcode 9 adjusts the relative base by the value of its only parameter. The relative
     /// base increases (or decreases, if the value is negative) by the value of the parameter.
-    fn do_adjust_relative_base(&mut self) -> bool {
+    fn do_adjust_relative_base(&mut self) -> Option<Response> {
         let value = self.get_param(0);
         self.relative_base += value;
         self.cursor += 2;
-        true
+        None
     }
 
     /// 99 means that the program is finished and should immediately halt.
-    fn do_halt(&mut self) -> bool {
-        false
+    fn do_halt(&mut self) -> Option<Response> {
+        Some(Response::Terminated)
     }
 
     fn get_param(&self, param_index: usize) -> isize {
@@ -234,6 +238,12 @@ impl str::FromStr for Intcode {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Response {
+    Terminated,
+    InputRequired,
+}
+
+#[derive(Debug, PartialEq)]
 enum InstructionMode {
     Position,
     Immediate,
@@ -266,13 +276,13 @@ mod test {
     fn day2_example1() {
         let mut intcode = Intcode::new(vec![1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50]);
 
-        assert!(intcode.step());
+        assert!(intcode.step().is_none());
         assert_eq!(70, intcode.data[3]);
 
-        assert!(intcode.step());
+        assert!(intcode.step().is_none());
         assert_eq!(3500, intcode.data[0]);
 
-        assert_eq!(false, intcode.step());
+        assert_eq!(Some(Response::Terminated), intcode.step());
     }
 
     #[test]
@@ -315,20 +325,20 @@ mod test {
     fn day5_example2() {
         let mut intcode = Intcode::new(vec![1002, 4, 3, 4, 33]);
 
-        assert!(intcode.step());
+        assert!(intcode.step().is_none());
         assert_eq!(99, intcode.data[4]);
 
-        assert_eq!(false, intcode.step());
+        assert_eq!(Some(Response::Terminated), intcode.step());
     }
 
     #[test]
     fn day5_example3() {
         let mut intcode = Intcode::new(vec![1101, 100, -1, 4, 0]);
 
-        assert!(intcode.step());
+        assert!(intcode.step().is_none());
         assert_eq!(99, intcode.data[4]);
 
-        assert_eq!(false, intcode.step());
+        assert_eq!(Some(Response::Terminated), intcode.step());
     }
 
     #[test]
