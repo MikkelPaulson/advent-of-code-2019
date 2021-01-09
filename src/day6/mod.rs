@@ -1,22 +1,33 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::prelude::*;
 use std::str;
 
 pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut map = parse(input);
+    let map = parse(input);
 
     let mut orbit_count = 0;
 
     let body_ids = map.keys().cloned().collect::<Vec<BodyID>>();
     for body_id in body_ids {
-        orbit_count += get_orbits(&body_id, &mut map);
+        orbit_count += get_orbit_count(&body_id, &map);
     }
 
     Ok(orbit_count)
 }
 
 pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    Err("Not implemented")
+    let map = parse(input);
+
+    let me = &"YOU".to_string();
+    let my_orbits = get_orbits(&me, &map);
+
+    let santa = &"SAN".to_string();
+    let santa_orbits = get_orbits(&santa, &map);
+
+    println!("{:?}", my_orbits);
+    println!("{:?}", santa_orbits);
+
+    Ok(my_orbits.symmetric_difference(&santa_orbits).count())
 }
 
 type BodyID = String;
@@ -26,10 +37,22 @@ enum OrbitData {
     CenterOfMass,
 }
 
-fn get_orbits(body_id: &BodyID, mut map: &HashMap<BodyID, OrbitData>) -> usize {
+fn get_orbits<'a>(
+    mut body_id: &'a BodyID,
+    map: &'a HashMap<BodyID, OrbitData>,
+) -> HashSet<&'a BodyID> {
+    let mut my_orbits = HashSet::new();
+    while let Some(OrbitData::Body(parent_id)) = map.get(body_id) {
+        body_id = parent_id;
+        my_orbits.insert(parent_id);
+    }
+    my_orbits
+}
+
+fn get_orbit_count(body_id: &BodyID, map: &HashMap<BodyID, OrbitData>) -> usize {
     match map.get(body_id) {
         Some(OrbitData::Body(parent_id)) => {
-            let count = get_orbits(parent_id, &mut map) + 1;
+            let count = get_orbit_count(parent_id, &map) + 1;
             count
         }
         Some(OrbitData::CenterOfMass) => 1,
