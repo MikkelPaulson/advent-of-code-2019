@@ -9,6 +9,7 @@ mod day25;
 mod day3;
 mod day4;
 mod day5;
+mod day6;
 mod day9;
 
 mod intcode;
@@ -50,6 +51,7 @@ impl Puzzle {
             (4, 2) => day4::part2(input),
             (5, 1) => day5::part1(input),
             (5, 2) => day5::part2(input),
+            (6, 1) => day6::part1(input),
             (9, 1) => day9::part1(input),
             (9, 2) => day9::part2(input),
             (17, 1) => day17::part1(input),
