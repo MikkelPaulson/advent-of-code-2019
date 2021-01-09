@@ -15,20 +15,24 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(orbit_count)
 }
 
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    Err("Not implemented")
+}
+
 type BodyID = String;
 
 enum OrbitData {
     Body(BodyID),
-    OrbitCount(usize),
+    CenterOfMass,
 }
 
 fn get_orbits(body_id: &BodyID, mut map: &HashMap<BodyID, OrbitData>) -> usize {
     match map.get(body_id) {
-        Some(OrbitData::OrbitCount(count)) => *count,
         Some(OrbitData::Body(parent_id)) => {
             let count = get_orbits(parent_id, &mut map) + 1;
             count
         }
+        Some(OrbitData::CenterOfMass) => 1,
         None => panic!(),
     }
 }
@@ -49,7 +53,7 @@ fn parse(mut input: Box<dyn Read>) -> HashMap<BodyID, OrbitData> {
         map.insert(
             child,
             if "COM" == parent {
-                OrbitData::OrbitCount(1)
+                OrbitData::CenterOfMass
             } else {
                 OrbitData::Body(parent)
             },
