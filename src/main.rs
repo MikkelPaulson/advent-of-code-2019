@@ -3,6 +3,7 @@ use std::io;
 use std::str;
 
 mod day1;
+mod day10;
 mod day17;
 mod day2;
 mod day25;
@@ -61,6 +62,7 @@ impl Puzzle {
             (8, 2) => day8::part2(input),
             (9, 1) => day9::part1(input),
             (9, 2) => day9::part2(input),
+            (10, 1) => day10::part1(input),
             (17, 1) => day17::part1(input),
             (17, 2) => day17::part2(input),
             (25, 1) => day25::part1(input),
