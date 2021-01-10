@@ -1,5 +1,7 @@
 use std::fmt;
 use std::io::prelude::*;
+use std::iter;
+use std::ops;
 use std::slice;
 use std::str;
 
@@ -30,10 +32,26 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(one_count * two_count)
 }
 
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    let image = parse(input, 25, 6);
+    let result = image
+        .layers
+        .iter()
+        .fold(Layer::empty(25, 6), |acc, layer| &acc + layer);
+
+    println!(
+        "{}",
+        format!("{}", result)
+            .chars()
+            .map(|c| if c == '0' { ' ' } else { c })
+            .collect::<String>()
+    );
+
+    Ok(0)
+}
+
 struct Image {
     pub layers: Vec<Layer>,
-    width: usize,
-    height: usize,
 }
 
 impl Image {
@@ -45,11 +63,7 @@ impl Image {
             layers.push(Layer::new(&data[start..start + layer_size], width, height));
         }
 
-        Self {
-            layers,
-            width,
-            height,
-        }
+        Self { layers }
     }
 }
 
@@ -71,6 +85,14 @@ impl Layer {
         }
     }
 
+    pub fn empty(width: usize, height: usize) -> Self {
+        Self {
+            data: iter::repeat(2).take(width * height).collect(),
+            width,
+            height,
+        }
+    }
+
     pub fn rows(&self) -> slice::ChunksExact<u8> {
         self.data.chunks_exact(self.width)
     }
@@ -86,6 +108,24 @@ impl fmt::Display for Layer {
             )?;
         }
         Ok(())
+    }
+}
+
+impl ops::Add for &Layer {
+    type Output = Layer;
+
+    fn add(self, other: Self) -> Self::Output {
+        let mut data = Vec::with_capacity(self.data.len());
+
+        for (a, b) in self.data.iter().zip(other.data.iter()) {
+            data.push(if a == &2 { *b } else { *a });
+        }
+
+        Layer {
+            data,
+            width: self.width,
+            height: self.height,
+        }
     }
 }
 
