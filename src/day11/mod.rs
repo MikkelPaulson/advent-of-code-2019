@@ -17,6 +17,19 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(ship.painted_panels.points.len())
 }
 
+pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+    let mut intcode = Intcode::parse(input);
+    let mut ship = Ship::default();
+
+    // Start on a white panel.
+    intcode.input.push(1);
+    ship.run(intcode)?;
+
+    println!("{}", ship.white_panels);
+
+    Ok(0)
+}
+
 #[derive(Default)]
 struct Ship {
     painted_panels: Map,

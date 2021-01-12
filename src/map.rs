@@ -11,33 +11,37 @@ pub struct Map {
 
 impl fmt::Display for Map {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        let max_coord = {
-            let [max_x, max_y] = self.points.iter().fold([0; 2], |[acc_x, acc_y], coord| {
-                [cmp::max(acc_x, coord.x), cmp::max(acc_y, coord.y)]
-            });
-            Coord { x: max_x, y: max_y }
+        let (min_coord, max_coord) = {
+            let [[min_x, min_y], [max_x, max_y]] =
+                self.points
+                    .iter()
+                    .fold([[0; 2]; 2], |[[min_x, min_y], [max_x, max_y]], coord| {
+                        [
+                            [cmp::min(min_x, coord.x), cmp::min(min_y, coord.y)],
+                            [cmp::max(max_x, coord.x), cmp::max(max_y, coord.y)],
+                        ]
+                    });
+            (Coord { x: min_x, y: min_y }, Coord { x: max_x, y: max_y })
         };
 
-        let output: String = iter::repeat(
-            iter::repeat('.')
-                .take(max_coord.x as usize + 1)
-                .chain(iter::once('\n'))
-                .enumerate(),
-        )
-        .take(max_coord.y as usize + 1)
-        .flatten()
-        .enumerate()
-        .map(|(offset, (col, c))| {
-            if self.points.contains(&Coord {
-                x: offset as isize / (max_coord.x + 2),
-                y: col as isize,
-            }) {
-                '#'
-            } else {
-                c
+        let mut output = String::with_capacity(
+            ((max_coord.x - min_coord.x + 1) * (max_coord.y - min_coord.y + 1)) as usize,
+        );
+
+        for y in min_coord.y..=max_coord.y {
+            if !output.is_empty() {
+                output.push('\n');
             }
-        })
-        .collect();
+            for x in min_coord.x..=max_coord.x {
+                output.push(match [x, y] {
+                    _ if self.points.contains(&Coord { x, y }) => '#',
+                    [0, 0] => '+',
+                    [0, _] => '|',
+                    [_, 0] => '-',
+                    _ => '.',
+                })
+            }
+        }
 
         write!(formatter, "{}", output)?;
 

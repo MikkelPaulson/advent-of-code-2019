@@ -8,7 +8,7 @@ use crate::map::{Coord, Map};
 pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let map = parse(input);
 
-    println!("{:?}", map);
+    println!("{}", map);
 
     let best_coord = find_station(&map).ok_or("No station coordinate found.")?;
     println!("Best location is {:?}", best_coord);
