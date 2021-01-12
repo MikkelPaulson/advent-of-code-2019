@@ -4,6 +4,7 @@ use std::str;
 
 mod day1;
 mod day10;
+mod day11;
 mod day17;
 mod day2;
 mod day25;
@@ -15,8 +16,8 @@ mod day7;
 mod day8;
 mod day9;
 
-mod coord;
 mod intcode;
+mod map;
 
 fn main() -> Result<(), &'static str> {
     let puzzle: Puzzle = env::args()
@@ -65,6 +66,7 @@ impl Puzzle {
             (9, 2) => day9::part2(input),
             (10, 1) => day10::part1(input),
             (10, 2) => day10::part2(input),
+            (11, 1) => day11::part1(input),
             (17, 1) => day17::part1(input),
             (17, 2) => day17::part2(input),
             (25, 1) => day25::part1(input),
