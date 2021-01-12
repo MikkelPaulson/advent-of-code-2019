@@ -15,6 +15,7 @@ mod day7;
 mod day8;
 mod day9;
 
+mod coord;
 mod intcode;
 
 fn main() -> Result<(), &'static str> {

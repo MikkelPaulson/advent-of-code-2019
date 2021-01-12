@@ -4,8 +4,9 @@ use std::fmt;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::iter;
-use std::ops;
 use std::str;
+
+use super::coord::Coord;
 
 pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let map = parse(input);
@@ -54,89 +55,12 @@ pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
             }
 
             if i == 200 {
-                return Ok(asteroid.unwrap().1 * 100 + asteroid.unwrap().0);
+                return Ok((asteroid.unwrap().x * 100 + asteroid.unwrap().y) as usize);
             }
         }
     }
 
     Err("Ran out of asteroids to destroy.")
-}
-
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-struct Coord(usize, usize);
-
-impl From<[usize; 2]> for Coord {
-    fn from(data: [usize; 2]) -> Coord {
-        Self(data[0], data[1])
-    }
-}
-
-impl ops::Add<CoordDiff> for Coord {
-    type Output = Coord;
-
-    fn add(self, other: CoordDiff) -> Self::Output {
-        Coord(
-            (self.0 as isize + other.0) as usize,
-            (self.1 as isize + other.1) as usize,
-        )
-    }
-}
-
-impl ops::Sub for Coord {
-    type Output = CoordDiff;
-
-    fn sub(self, other: Self) -> Self::Output {
-        CoordDiff(
-            self.0 as isize - other.0 as isize,
-            self.1 as isize - other.1 as isize,
-        )
-    }
-}
-
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-struct CoordDiff(isize, isize);
-
-impl CoordDiff {
-    fn reduce(&self) -> CoordDiff {
-        let gcd = gcd(self.0.abs(), self.1.abs());
-        CoordDiff(self.0 / gcd, self.1 / gcd)
-    }
-
-    fn angle(&self) -> f64 {
-        let angle = (self.0 as f64).atan2(self.1 as f64);
-        if angle >= std::f64::consts::FRAC_PI_2 {
-            angle - std::f64::consts::FRAC_PI_2
-        } else {
-            angle + std::f64::consts::PI + std::f64::consts::FRAC_PI_2
-        }
-    }
-
-    fn len(&self) -> usize {
-        (self.0.abs() + self.1.abs()) as usize
-    }
-}
-
-impl cmp::Ord for CoordDiff {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        match self.angle().partial_cmp(&other.angle()) {
-            Some(cmp::Ordering::Equal) | None => self.len().cmp(&other.len()),
-            Some(o) => o,
-        }
-    }
-}
-
-impl cmp::PartialOrd for CoordDiff {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-fn gcd(a: isize, b: isize) -> isize {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
 }
 
 #[derive(Debug)]
@@ -186,29 +110,26 @@ impl Map {
 impl fmt::Display for Map {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         let max_coord = {
-            let [max_row, max_col] =
-                self.asteroids
-                    .iter()
-                    .fold([0; 2], |[acc_row, acc_col], coord| {
-                        [cmp::max(acc_row, coord.0), cmp::max(acc_col, coord.1)]
-                    });
-            Coord(max_row, max_col)
+            let [max_x, max_y] = self.asteroids.iter().fold([0; 2], |[acc_x, acc_y], coord| {
+                [cmp::max(acc_x, coord.x), cmp::max(acc_y, coord.y)]
+            });
+            Coord { x: max_x, y: max_y }
         };
 
         let output: String = iter::repeat(
             iter::repeat('.')
-                .take(max_coord.1 + 1)
+                .take(max_coord.x as usize + 1)
                 .chain(iter::once('\n'))
                 .enumerate(),
         )
-        .take(max_coord.0 + 1)
+        .take(max_coord.y as usize + 1)
         .flatten()
         .enumerate()
         .map(|(offset, (col, c))| {
-            if self
-                .asteroids
-                .contains(&Coord(offset / (max_coord.0 + 2), col))
-            {
+            if self.asteroids.contains(&Coord {
+                x: offset as isize / (max_coord.x + 2),
+                y: col as isize,
+            }) {
                 '#'
             } else {
                 c
@@ -229,7 +150,7 @@ fn parse(input: Box<dyn Read>) -> Map {
     for (row, line) in reader.lines().enumerate() {
         for (col, c) in line.unwrap().chars().enumerate() {
             if c == '#' {
-                asteroids.insert(Coord(row, col));
+                asteroids.insert([col, row].into());
             }
         }
     }
