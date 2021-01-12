@@ -177,15 +177,6 @@ enum Direction {
 }
 
 impl Direction {
-    pub fn turn_right(&self) -> Self {
-        match self {
-            Direction::North => Direction::East,
-            Direction::East => Direction::South,
-            Direction::South => Direction::West,
-            Direction::West => Direction::North,
-        }
-    }
-
     fn to_str(&self) -> &'static str {
         match self {
             Direction::North => "north",
