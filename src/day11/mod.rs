@@ -14,6 +14,8 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     intcode.input.push(0);
     ship.run(intcode)?;
 
+    println!("{}", ship.painted_panels);
+
     Ok(ship.painted_panels.points.len())
 }
 

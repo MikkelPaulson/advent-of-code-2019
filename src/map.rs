@@ -1,7 +1,6 @@
 use std::cmp;
 use std::collections::HashSet;
 use std::fmt;
-use std::iter;
 use std::ops;
 
 #[derive(Debug, Default)]
