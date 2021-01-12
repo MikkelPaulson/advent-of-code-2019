@@ -12,50 +12,9 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
 
     // Start on a black panel.
     intcode.input.push(0);
+    ship.run(intcode)?;
 
-    Ok(loop {
-        let result = intcode.run();
-
-        let direction = intcode.output.pop().ok_or("No direction output.")?;
-        let color = intcode.output.pop().ok_or("No color output.")?;
-
-        ship.painted_panels.points.insert(ship.robot.position);
-
-        match color {
-            0 => {
-                ship.white_panels.points.remove(&ship.robot.position);
-            }
-            1 => {
-                ship.white_panels.points.insert(ship.robot.position);
-            }
-            _ => return Err("Invalid color."),
-        }
-
-        match direction {
-            0 => {
-                ship.robot.facing.turn_left();
-                ship.robot.advance();
-            }
-            1 => {
-                ship.robot.facing.turn_right();
-                ship.robot.advance();
-            }
-            _ => return Err("Invalid direction."),
-        }
-
-        match result {
-            Response::Terminated => break ship.painted_panels.points.len(),
-            Response::InputRequired => {
-                intcode
-                    .input
-                    .push(if ship.white_panels.points.contains(&ship.robot.position) {
-                        1
-                    } else {
-                        0
-                    })
-            }
-        }
-    })
+    Ok(ship.painted_panels.points.len())
 }
 
 #[derive(Default)]
@@ -63,6 +22,54 @@ struct Ship {
     painted_panels: Map,
     white_panels: Map,
     robot: Robot,
+}
+
+impl Ship {
+    pub fn run(&mut self, mut intcode: Intcode) -> Result<(), &'static str> {
+        loop {
+            let result = intcode.run();
+
+            let direction = intcode.output.pop().ok_or("No direction output.")?;
+            let color = intcode.output.pop().ok_or("No color output.")?;
+
+            self.painted_panels.points.insert(self.robot.position);
+
+            match color {
+                0 => {
+                    self.white_panels.points.remove(&self.robot.position);
+                }
+                1 => {
+                    self.white_panels.points.insert(self.robot.position);
+                }
+                _ => return Err("Invalid color."),
+            }
+
+            match direction {
+                0 => {
+                    self.robot.facing.turn_left();
+                    self.robot.advance();
+                }
+                1 => {
+                    self.robot.facing.turn_right();
+                    self.robot.advance();
+                }
+                _ => return Err("Invalid direction."),
+            }
+
+            match result {
+                Response::Terminated => return Ok(()),
+                Response::InputRequired => {
+                    intcode
+                        .input
+                        .push(if self.white_panels.points.contains(&self.robot.position) {
+                            1
+                        } else {
+                            0
+                        })
+                }
+            }
+        }
+    }
 }
 
 struct Robot {
