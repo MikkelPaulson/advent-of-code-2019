@@ -1,12 +1,52 @@
 use std::cmp;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fmt;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::iter;
+use std::ops;
 use std::str;
 
-type Coord = [isize; 2];
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+struct Coord(usize, usize);
+
+impl From<[usize; 2]> for Coord {
+    fn from(data: [usize; 2]) -> Coord {
+        Self(data[0], data[1])
+    }
+}
+
+impl ops::Add<CoordDiff> for Coord {
+    type Output = Coord;
+
+    fn add(self, other: CoordDiff) -> Self::Output {
+        Coord(
+            (self.0 as isize + other.0) as usize,
+            (self.1 as isize + other.1) as usize,
+        )
+    }
+}
+
+impl ops::Sub for Coord {
+    type Output = CoordDiff;
+
+    fn sub(self, other: Self) -> Self::Output {
+        CoordDiff(
+            self.0 as isize - other.0 as isize,
+            self.1 as isize - other.1 as isize,
+        )
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+struct CoordDiff(isize, isize);
+
+impl CoordDiff {
+    fn reduce(&self) -> CoordDiff {
+        let gcd = gcd(self.0.abs(), self.1.abs());
+        CoordDiff(self.0 / gcd, self.1 / gcd)
+    }
+}
 
 pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     let map = parse(input);
@@ -14,25 +54,25 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     println!("{:?}", map);
     let mut output = format!("{}", map);
 
-    let mut best_coord = [0, 0];
+    let mut best_coord = None;
     let mut best_count = 0;
 
     for coord in map.asteroids.iter() {
         let count = map.count_asteroids(coord);
 
         if count < 10 {
-            let offset = coord[0] as usize * (output.find('\n').unwrap() + 1) + coord[1] as usize;
+            let offset = coord.0 * (output.find('\n').unwrap() + 1) + coord.1;
             output.replace_range(offset..offset + 1, &count.to_string());
         }
 
         if count > best_count {
             best_count = count;
-            best_coord = *coord;
+            best_coord = Some(coord);
         }
     }
 
     println!("{}", output);
-    println!("Best location is {:?}", [best_coord[1], best_coord[0]]);
+    println!("Best location is {:?}", best_coord);
 
     Ok(best_count)
 }
@@ -59,24 +99,15 @@ impl Map {
             }
             count += 1;
 
-            let step = [
-                asteroid_coord[0] - station_coord[0],
-                asteroid_coord[1] - station_coord[1],
-            ];
+            let step = (*asteroid_coord - *station_coord).reduce();
+            let mut target_coord = *station_coord + step;
 
-            let gcd = gcd(step[0].abs(), step[1].abs());
-
-            if gcd != 1 {
-                let step = [step[0] / gcd, step[1] / gcd];
-                for i in 1..gcd {
-                    if self.asteroids.contains(&[
-                        station_coord[0] + (step[0] * i),
-                        station_coord[1] + (step[1] * i),
-                    ]) {
-                        count -= 1;
-                        break;
-                    }
+            while &target_coord != asteroid_coord {
+                if self.asteroids.contains(&target_coord) {
+                    count -= 1;
+                    break;
                 }
+                target_coord = target_coord + step;
             }
         }
         count
@@ -85,26 +116,29 @@ impl Map {
 
 impl fmt::Display for Map {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        let max_coord = self
-            .asteroids
-            .iter()
-            .fold([0; 2], |[acc_row, acc_col], [row, col]| {
-                [cmp::max(acc_row, *row), cmp::max(acc_col, *col)]
-            });
+        let max_coord = {
+            let [max_row, max_col] =
+                self.asteroids
+                    .iter()
+                    .fold([0; 2], |[acc_row, acc_col], coord| {
+                        [cmp::max(acc_row, coord.0), cmp::max(acc_col, coord.1)]
+                    });
+            Coord(max_row, max_col)
+        };
 
         let output: String = iter::repeat(
             iter::repeat('.')
-                .take(max_coord[1] as usize + 1)
+                .take(max_coord.1 + 1)
                 .chain(iter::once('\n'))
                 .enumerate(),
         )
-        .take(max_coord[0] as usize + 1)
+        .take(max_coord.0 + 1)
         .flatten()
         .enumerate()
         .map(|(offset, (col, c))| {
             if self
                 .asteroids
-                .contains(&[(offset as isize / (max_coord[0] + 2)), col as isize])
+                .contains(&Coord(offset / (max_coord.0 + 2), col))
             {
                 '#'
             } else {
@@ -126,7 +160,7 @@ fn parse(input: Box<dyn Read>) -> Map {
     for (row, line) in reader.lines().enumerate() {
         for (col, c) in line.unwrap().chars().enumerate() {
             if c == '#' {
-                asteroids.insert([row as isize, col as isize]);
+                asteroids.insert(Coord(row, col));
             }
         }
     }
