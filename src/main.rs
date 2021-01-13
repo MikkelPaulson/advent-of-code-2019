@@ -75,6 +75,7 @@ impl Puzzle {
             (11, 1) => day11::part1(&input),
             (11, 2) => day11::part2(&input),
             (12, 1) => day12::part1(&input),
+            (12, 2) => day12::part2(&input),
             (17, 1) => day17::part1(&input),
             (17, 2) => day17::part2(&input),
             (25, 1) => day25::part1(&input),
