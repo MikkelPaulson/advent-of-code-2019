@@ -1,14 +1,12 @@
 use std::collections;
-use std::io;
-use std::io::prelude::*;
 use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part1(input: &str) -> Result<usize, String> {
     let lines = parse(input);
     let intersections = lines[0].plot_intersections(&lines[1]);
 
     if intersections.is_empty() {
-        Err("No intersections found!")
+        Err("No intersections found!".to_string())
     } else {
         let mut min_distance = usize::MAX;
 
@@ -23,27 +21,24 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     }
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part2(input: &str) -> Result<usize, String> {
     let lines = parse(input);
     let intersections = lines[0].plot_intersections(&lines[1]);
 
     if intersections.is_empty() {
-        Err("No intersections found!")
+        Err("No intersections found!".to_string())
     } else {
         println!("{:?}", intersections);
         intersections
             .iter()
             .map(|(_, _, distance)| *distance)
             .min()
-            .ok_or("Not OK!")
+            .ok_or("Not OK!".to_string())
     }
 }
 
-fn parse(input: Box<dyn Read>) -> [Line; 2] {
-    let mut result = io::BufReader::new(input)
-        .lines()
-        .map(|line| line.unwrap().trim().parse().unwrap());
-
+fn parse(input: &str) -> [Line; 2] {
+    let mut result = input.trim().split('\n').map(|s| s.parse().unwrap());
     [result.next().unwrap(), result.next().unwrap()]
 }
 
@@ -188,5 +183,34 @@ impl str::FromStr for Line {
             vertical_segments,
             horizontal_segments,
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{part1, part2};
+
+    #[test]
+    fn part1_examples() {
+        assert_eq!(Ok(6), part1(include_str!("test1.txt")));
+        assert_eq!(Ok(159), part1(include_str!("test2.txt")));
+        assert_eq!(Ok(135), part1(include_str!("test3.txt")));
+    }
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(1519), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_examples() {
+        assert_eq!(Ok(30), part2(include_str!("test1.txt")));
+        assert_eq!(Ok(610), part2(include_str!("test2.txt")));
+        assert_eq!(Ok(410), part2(include_str!("test3.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(14358), part2(include_str!("input.txt")));
     }
 }

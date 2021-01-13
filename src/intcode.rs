@@ -1,4 +1,3 @@
-use std::io::prelude::*;
 use std::str;
 
 #[derive(Clone, Debug)]
@@ -21,6 +20,11 @@ impl Intcode {
         }
     }
 
+    pub fn with_input(mut self, data: &[isize]) -> Self {
+        data.iter().for_each(|i| self.input.push(*i));
+        self
+    }
+
     pub fn input_str(&mut self, data: &str) {
         self.input.reserve(data.len());
         data.chars().for_each(|c| self.input.push(c as isize));
@@ -28,12 +32,6 @@ impl Intcode {
 
     pub fn output_string(&self) -> String {
         self.output.iter().map(|c| (*c as u8) as char).collect()
-    }
-
-    pub fn parse(mut input: Box<dyn Read>) -> Self {
-        let mut buffer = String::new();
-        input.read_to_string(&mut buffer).unwrap();
-        buffer.parse().unwrap()
     }
 
     pub fn set(&mut self, offset: usize, value: isize) {

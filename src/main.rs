@@ -1,5 +1,6 @@
 use std::env;
-use std::io;
+use std::fs::File;
+use std::io::prelude::*;
 use std::str;
 
 mod day1;
@@ -19,15 +20,13 @@ mod day9;
 mod intcode;
 mod map;
 
-fn main() -> Result<(), &'static str> {
+fn main() -> Result<(), String> {
     let puzzle: Puzzle = env::args()
         .nth(1)
-        .ok_or("Missing expected day.part")
+        .ok_or_else(|| "Missing expected day.part.".to_string())
         .and_then(|arg| arg.parse())?;
 
-    puzzle
-        .run(Box::new(io::stdin()))
-        .map(|output| println!("{}", output))
+    puzzle.run().map(|output| println!("{}", output))
 }
 
 struct Puzzle {
@@ -36,62 +35,84 @@ struct Puzzle {
 }
 
 impl Puzzle {
-    pub fn try_new(day: u8, part: u8) -> Result<Self, &'static str> {
+    pub fn try_new(day: u8, part: u8) -> Result<Self, String> {
         if (1..=25).contains(&day) && (1..=2).contains(&part) {
             Ok(Self { day, part })
         } else {
-            Err("Invalid day.part syntax, expected [1-25].[1-2]")
+            Err(format!(
+                "Invalid day.part syntax, expected [1-25].[1-2],  got {}.{}",
+                day, part
+            ))
         }
     }
 
-    pub fn run(&self, input: Box<dyn io::Read>) -> Result<usize, &'static str> {
+    pub fn run(&self) -> Result<usize, String> {
+        let input = self.get_input();
+
         match (self.day, self.part) {
-            (1, 1) => day1::part1(input),
-            (1, 2) => day1::part2(input),
-            (2, 1) => day2::part1(input),
-            (2, 2) => day2::part2(input),
-            (3, 1) => day3::part1(input),
-            (3, 2) => day3::part2(input),
-            (4, 1) => day4::part1(input),
-            (4, 2) => day4::part2(input),
-            (5, 1) => day5::part1(input),
-            (5, 2) => day5::part2(input),
-            (6, 1) => day6::part1(input),
-            (6, 2) => day6::part2(input),
-            (7, 1) => day7::part1(input),
-            (7, 2) => day7::part2(input),
-            (8, 1) => day8::part1(input),
-            (8, 2) => day8::part2(input),
-            (9, 1) => day9::part1(input),
-            (9, 2) => day9::part2(input),
-            (10, 1) => day10::part1(input),
-            (10, 2) => day10::part2(input),
-            (11, 1) => day11::part1(input),
-            (11, 2) => day11::part2(input),
-            (17, 1) => day17::part1(input),
-            (17, 2) => day17::part2(input),
-            (25, 1) => day25::part1(input),
-            _ => Err("That day/part does not yet exist"),
+            (1, 1) => day1::part1(&input),
+            (1, 2) => day1::part2(&input),
+            (2, 1) => day2::part1(&input),
+            (2, 2) => day2::part2(&input),
+            (3, 1) => day3::part1(&input),
+            (3, 2) => day3::part2(&input),
+            (4, 1) => day4::part1(&input),
+            (4, 2) => day4::part2(&input),
+            (5, 1) => day5::part1(&input),
+            (5, 2) => day5::part2(&input),
+            (6, 1) => day6::part1(&input),
+            (6, 2) => day6::part2(&input),
+            (7, 1) => day7::part1(&input),
+            (7, 2) => day7::part2(&input),
+            (8, 1) => day8::part1(&input),
+            (8, 2) => day8::part2(&input),
+            (9, 1) => day9::part1(&input),
+            (9, 2) => day9::part2(&input),
+            (10, 1) => day10::part1(&input),
+            (10, 2) => day10::part2(&input),
+            (11, 1) => day11::part1(&input),
+            (11, 2) => day11::part2(&input),
+            (17, 1) => day17::part1(&input),
+            (17, 2) => day17::part2(&input),
+            (25, 1) => day25::part1(&input),
+            (day, part) => Err(format!(
+                "Day {} part {} has not yet been implemented.",
+                day, part
+            )),
         }
+    }
+
+    fn get_input(&self) -> String {
+        let mut buffer = String::new();
+
+        File::open(format!("src/day{}/input.txt", self.day))
+            .unwrap()
+            .read_to_string(&mut buffer)
+            .unwrap();
+
+        buffer
     }
 }
 
 impl str::FromStr for Puzzle {
-    type Err = &'static str;
+    type Err = String;
 
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         let mut split = raw.split('.');
         let day = split
             .next()
-            .and_then(|day| day.parse().ok())
-            .ok_or("Invalid day")?;
+            .ok_or("Missing day.")?
+            .parse()
+            .map_err(|e| format!("{:?}", e))?;
         let part = split
             .next()
-            .and_then(|day| day.parse().ok())
-            .ok_or("Invalid part")?;
+            .ok_or("Missing part.")?
+            .parse()
+            .map_err(|e| format!("{:?}", e))?;
+
         split
             .next()
-            .map(|_| -> Result<(), &'static str> { Err("Invalid input") })
+            .map(|s| -> Result<(), String> { Err(format!("Unexpected input part: {}", s)) })
             .transpose()?;
 
         Self::try_new(day, part)

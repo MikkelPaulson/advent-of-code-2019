@@ -1,25 +1,46 @@
 use crate::intcode::Intcode;
-use std::io::prelude::*;
-use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part1(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
 
     intcode.input.push(1);
     intcode.run();
 
     println!("Output: {:?}", intcode.output);
 
-    intcode.output.pop().ok_or("No output").map(|n| n as usize)
+    intcode
+        .output
+        .pop()
+        .ok_or_else(|| "No output.".to_string())
+        .map(|n| n as usize)
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part2(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
 
     intcode.input.push(5);
     intcode.run();
 
     println!("Output: {:?}", intcode.output);
 
-    intcode.output.pop().ok_or("No output").map(|n| n as usize)
+    intcode
+        .output
+        .pop()
+        .ok_or_else(|| "No output.".to_string())
+        .map(|n| n as usize)
+}
+
+#[cfg(test)]
+mod test {
+    use super::{part1, part2};
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(7839346), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(447803), part2(include_str!("input.txt")));
+    }
 }

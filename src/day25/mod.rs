@@ -5,8 +5,8 @@ use std::io;
 use std::io::prelude::*;
 use std::str;
 
-pub fn part1(_: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut game = Game::new();
+pub fn part1(input: &str) -> Result<usize, String> {
+    let mut game = Game::new(input);
     game.loot()?;
 
     let stdin = io::stdin();
@@ -34,8 +34,8 @@ struct Game {
 }
 
 impl Game {
-    pub fn new() -> Self {
-        let mut intcode: Intcode = include_str!("input.txt").parse().unwrap();
+    pub fn new(input: &str) -> Self {
+        let mut intcode: Intcode = input.parse().unwrap();
         intcode.run();
         let room: Room = intcode.output_string().parse().unwrap();
         intcode.output.clear();

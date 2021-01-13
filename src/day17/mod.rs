@@ -1,9 +1,7 @@
 use crate::intcode::Intcode;
-use std::io::prelude::*;
-use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part1(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
     intcode.run();
 
     let map = intcode.output_string();
@@ -17,8 +15,8 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
         .sum())
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part2(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
     intcode.set(0, 2);
 
     // Main movement routine
@@ -37,7 +35,11 @@ pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
     intcode.input_str(&"n\n");
     intcode.run();
 
-    let result = intcode.output.pop().map(|i| i as usize).ok_or("No output.");
+    let result = intcode
+        .output
+        .pop()
+        .map(|i| i as usize)
+        .ok_or_else(|| "No output.".to_string());
     println!("{}", intcode.output_string());
     result
 }
@@ -60,4 +62,19 @@ fn get_intersections(map: &str) -> Vec<(usize, usize)> {
     }
 
     intersections
+}
+
+#[cfg(test)]
+mod test {
+    use super::{part1, part2};
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(7816), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(952010), part2(include_str!("input.txt")));
+    }
 }

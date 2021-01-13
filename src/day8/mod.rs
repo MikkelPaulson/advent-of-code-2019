@@ -1,11 +1,9 @@
 use std::fmt;
-use std::io::prelude::*;
 use std::iter;
 use std::ops;
 use std::slice;
-use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part1(input: &str) -> Result<usize, String> {
     let image = parse(input, 25, 6);
 
     let min_layer = image
@@ -32,7 +30,7 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(one_count * two_count)
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part2(input: &str) -> Result<usize, String> {
     let image = parse(input, 25, 6);
     let result = image
         .layers
@@ -129,8 +127,16 @@ impl ops::Add for &Layer {
     }
 }
 
-fn parse(mut input: Box<dyn Read>, width: usize, height: usize) -> Image {
-    let mut buffer = String::new();
-    input.read_to_string(&mut buffer).unwrap();
-    Image::new(&buffer.trim(), width, height)
+fn parse(input: &str, width: usize, height: usize) -> Image {
+    Image::new(input.trim(), width, height)
+}
+
+#[cfg(test)]
+mod test {
+    use super::part1;
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(1677), part1(include_str!("input.txt")));
+    }
 }

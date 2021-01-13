@@ -3,11 +3,9 @@ use crate::map::{Coord, Map};
 
 use std::default;
 use std::fmt;
-use std::io::prelude::*;
-use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part1(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
     let mut ship = Ship::default();
 
     // Start on a black panel.
@@ -19,8 +17,8 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(ship.painted_panels.points.len())
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part2(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
     let mut ship = Ship::default();
 
     // Start on a white panel.
@@ -147,5 +145,15 @@ impl Direction {
             Direction::Down => Direction::Left,
             Direction::Left => Direction::Up,
         };
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::part1;
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(2226), part1(include_str!("input.txt")));
     }
 }

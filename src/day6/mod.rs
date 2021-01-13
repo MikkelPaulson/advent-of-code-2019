@@ -1,8 +1,6 @@
 use std::collections::{HashMap, HashSet};
-use std::io::prelude::*;
-use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part1(input: &str) -> Result<usize, String> {
     let map = parse(input);
 
     let mut orbit_count = 0;
@@ -15,7 +13,7 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(orbit_count)
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part2(input: &str) -> Result<usize, String> {
     let map = parse(input);
 
     let me = &"YOU".to_string();
@@ -60,12 +58,10 @@ fn get_orbit_count(body_id: &BodyID, map: &HashMap<BodyID, OrbitData>) -> usize 
     }
 }
 
-fn parse(mut input: Box<dyn Read>) -> HashMap<BodyID, OrbitData> {
-    let mut buffer = String::new();
-    input.read_to_string(&mut buffer).unwrap();
+fn parse(input: &str) -> HashMap<BodyID, OrbitData> {
     let mut map = HashMap::new();
 
-    for line in buffer.trim_end().split('\n') {
+    for line in input.trim_end().split('\n') {
         let mut parts = line
             .split(')')
             .map(|s| s.to_string())
@@ -84,4 +80,29 @@ fn parse(mut input: Box<dyn Read>) -> HashMap<BodyID, OrbitData> {
     }
 
     map
+}
+
+#[cfg(test)]
+mod test {
+    use super::{part1, part2};
+
+    #[test]
+    fn part1_examples() {
+        assert_eq!(Ok(42), part1(include_str!("test1.txt")));
+    }
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(301100), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_examples() {
+        assert_eq!(Ok(4), part2(include_str!("test2.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(547), part2(include_str!("input.txt")));
+    }
 }

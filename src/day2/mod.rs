@@ -1,9 +1,7 @@
 use crate::intcode::Intcode;
-use std::io::prelude::*;
-use std::str;
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let mut intcode = Intcode::parse(input);
+pub fn part1(input: &str) -> Result<usize, String> {
+    let mut intcode: Intcode = input.parse()?;
 
     intcode.set(1, 12);
     intcode.set(2, 2);
@@ -13,8 +11,8 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(intcode.get(0) as usize)
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
-    let clean_intcode = Intcode::parse(input);
+pub fn part2(input: &str) -> Result<usize, String> {
+    let clean_intcode: Intcode = input.parse()?;
 
     for noun in 0..100 {
         for verb in 0..100 {
@@ -30,5 +28,20 @@ pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
             }
         }
     }
-    Err("No matching result was found.")
+    Err("No matching result was found.".to_string())
+}
+
+#[cfg(test)]
+mod test {
+    use super::{part1, part2};
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(4138658), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(7264), part2(include_str!("input.txt")));
+    }
 }

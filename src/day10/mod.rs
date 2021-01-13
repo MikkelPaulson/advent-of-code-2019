@@ -1,11 +1,8 @@
 use std::collections::{BTreeMap, HashSet};
-use std::io::prelude::*;
-use std::io::BufReader;
-use std::str;
 
 use crate::map::{Coord, Map};
 
-pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part1(input: &str) -> Result<usize, String> {
     let map = parse(input);
 
     println!("{}", map);
@@ -16,7 +13,7 @@ pub fn part1(input: Box<dyn Read>) -> Result<usize, &'static str> {
     Ok(count_asteroids(&map, &best_coord))
 }
 
-pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
+pub fn part2(input: &str) -> Result<usize, String> {
     let map = parse(input);
     let station_coord = find_station(&map).ok_or("No station coordinate found.")?;
 
@@ -57,7 +54,7 @@ pub fn part2(input: Box<dyn Read>) -> Result<usize, &'static str> {
         }
     }
 
-    Err("Ran out of asteroids to destroy.")
+    Err("Ran out of asteroids to destroy.".to_string())
 }
 
 fn find_station(map: &Map) -> Option<Coord> {
@@ -97,12 +94,11 @@ fn count_asteroids(map: &Map, station_coord: &Coord) -> usize {
     count
 }
 
-fn parse(input: Box<dyn Read>) -> Map {
-    let reader = BufReader::new(input);
+fn parse(input: &str) -> Map {
     let mut asteroids = HashSet::new();
 
-    for (row, line) in reader.lines().enumerate() {
-        for (col, c) in line.unwrap().chars().enumerate() {
+    for (row, line) in input.split('\n').enumerate() {
+        for (col, c) in line.chars().enumerate() {
             if c == '#' {
                 asteroids.insert([col, row].into());
             }
@@ -110,4 +106,33 @@ fn parse(input: Box<dyn Read>) -> Map {
     }
 
     Map { points: asteroids }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{part1, part2};
+
+    #[test]
+    fn part1_examples() {
+        assert_eq!(Ok(8), part1(include_str!("test1.txt")));
+        assert_eq!(Ok(33), part1(include_str!("test2.txt")));
+        assert_eq!(Ok(35), part1(include_str!("test3.txt")));
+        assert_eq!(Ok(41), part1(include_str!("test4.txt")));
+        assert_eq!(Ok(210), part1(include_str!("test5.txt")));
+    }
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(269), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_examples() {
+        assert_eq!(Ok(802), part2(include_str!("test5.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(612), part2(include_str!("input.txt")));
+    }
 }
