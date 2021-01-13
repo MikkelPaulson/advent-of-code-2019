@@ -3,6 +3,8 @@ use std::collections::HashSet;
 use std::fmt;
 use std::ops;
 
+use super::math::gcd;
+
 #[derive(Debug, Default)]
 pub struct Map {
     pub points: HashSet<Coord>,
@@ -135,13 +137,5 @@ impl cmp::Ord for CoordDiff {
 impl cmp::PartialOrd for CoordDiff {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-fn gcd(a: isize, b: isize) -> isize {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
     }
 }
