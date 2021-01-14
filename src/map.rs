@@ -98,11 +98,13 @@ impl ops::Sub for Coord {
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct CoordDiff {
-    x: isize,
-    y: isize,
+    pub x: isize,
+    pub y: isize,
 }
 
 impl CoordDiff {
+    pub const ZERO: CoordDiff = CoordDiff { x: 0, y: 0 };
+
     pub fn reduce(&self) -> CoordDiff {
         let gcd = gcd(self.x.abs(), self.y.abs());
         CoordDiff {
