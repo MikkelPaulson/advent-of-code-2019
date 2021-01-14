@@ -8,26 +8,57 @@ use crate::map::Coord;
 
 pub fn part1(input: &str) -> Result<usize, String> {
     let mut intcode: Intcode = input.parse()?;
-
     intcode.run();
-    let display = Display::try_from(&intcode.output.split_off(0)[..])?;
-    println!("{}", display);
 
-    Ok(display
-        .data
+    let game = Game::try_from(&intcode.output.split_off(0)[..])?;
+    println!("{}", game);
+
+    Ok(game
+        .tiles
         .values()
         .filter(|tile| tile == &&Tile::Block)
         .count())
 }
 
-struct Display {
-    data: HashMap<Coord, Tile>,
+#[derive(Default)]
+struct Game {
+    tiles: HashMap<Coord, Tile>,
+    score: isize,
 }
 
-impl fmt::Display for Display {
+impl Game {
+    fn update(&mut self, input: &[isize]) -> Result<(), String> {
+        for chunk in input.chunks_exact(3) {
+            self.update_part([chunk[0], chunk[1], chunk[2]])?;
+        }
+        Ok(())
+    }
+
+    fn update_part(&mut self, input: [isize; 3]) -> Result<(), String> {
+        if input[0..=1] == [-1, 0] {
+            self.score = input[2];
+        } else {
+            self.tiles
+                .insert([input[0], input[1]].into(), Tile::try_from(&input[2])?);
+        }
+        Ok(())
+    }
+}
+
+impl TryFrom<&[isize]> for Game {
+    type Error = String;
+
+    fn try_from(input: &[isize]) -> Result<Self, Self::Error> {
+        let mut game = Game::default();
+        game.update(input)?;
+        Ok(game)
+    }
+}
+
+impl fmt::Display for Game {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let max_coord: Coord = self
-            .data
+            .tiles
             .keys()
             .fold([0, 0], |[x_max, y_max], coord| {
                 [cmp::max(x_max, coord.x), cmp::max(y_max, coord.y)]
@@ -35,41 +66,21 @@ impl fmt::Display for Display {
             .into();
 
         let mut output =
-            String::with_capacity(((max_coord.y + 3) * (max_coord.x + 4)) as usize - 1);
-
-        output.push('+');
-        (0..=max_coord.x).for_each(|_| output.push('-'));
-        output.push_str("+\n");
+            String::with_capacity(((max_coord.y + 1) * (max_coord.x + 2)) as usize - 1);
 
         for y in 0..=max_coord.y {
-            output.push('|');
             for x in 0..=max_coord.x {
-                output.push(self.data.get(&[x, y].into()).unwrap_or(&Tile::Empty).into());
+                output.push(
+                    self.tiles
+                        .get(&[x, y].into())
+                        .unwrap_or(&Tile::Empty)
+                        .into(),
+                );
             }
-            output.push_str("|\n");
+            output.push('\n');
         }
 
-        output.push('+');
-        (0..=max_coord.x).for_each(|_| output.push('-'));
-        output.push('+');
-
-        write!(f, "{}", output)
-    }
-}
-
-impl TryFrom<&[isize]> for Display {
-    type Error = String;
-
-    fn try_from(input: &[isize]) -> Result<Self, Self::Error> {
-        Ok(Self {
-            data: input
-                .chunks_exact(3)
-                .map(|data| match Tile::try_from(&data[2]) {
-                    Ok(t) => Ok(([data[0], data[1]].into(), t)),
-                    Err(e) => Err(e),
-                })
-                .collect::<Result<_, _>>()?,
-        })
+        write!(f, "{}", output.trim_end_matches('\n'))
     }
 }
 
