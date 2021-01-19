@@ -6,25 +6,44 @@ pub fn part1(input: &str) -> Result<usize, String> {
     let reactions = parse(input)?;
     let mut supply = Supply::default();
 
-    supply = get(&Chemical::FUEL, 1, &reactions, supply)?;
-
-    println!("{:#?}", supply);
+    get(&Chemical::FUEL, 1, &reactions, &mut supply)?;
 
     Ok(supply.ore_required as usize)
 }
 
-type ChemicalQuantity<'a> = (Chemical<'a>, u32);
+pub fn part2(input: &str) -> Result<usize, String> {
+    let reactions = parse(input)?;
+    let ore_available: u64 = 1_000_000_000_000;
+
+    let (mut min, mut max) = (0, ore_available);
+
+    while min < max - 1 {
+        let mut supply = Supply::default();
+        let test_val = ((min + max) as f64 / 2.).ceil() as u64;
+        get(&Chemical::FUEL, test_val, &reactions, &mut supply)?;
+
+        if supply.ore_required > ore_available {
+            max = test_val;
+        } else {
+            min = test_val;
+        }
+    }
+
+    Ok(min as usize)
+}
+
+type ChemicalQuantity<'a> = (Chemical<'a>, u64);
 type Reactions<'a> = HashMap<Chemical<'a>, Reaction<'a>>;
 
 fn get<'a>(
     chemical: &Chemical<'a>,
-    quantity: u32,
+    quantity: u64,
     reactions: &Reactions<'a>,
-    mut supply: Supply<'a>,
-) -> Result<Supply<'a>, String> {
+    supply: &mut Supply<'a>,
+) -> Result<(), String> {
     if chemical == &Chemical::ORE {
         supply.ore_required += quantity;
-        return Ok(supply);
+        return Ok(());
     }
 
     let need = if let Some(available) = supply.chemicals.remove(chemical) {
@@ -45,10 +64,18 @@ fn get<'a>(
             .get(chemical)
             .ok_or_else(|| format!("No reaction to produce {:?}.", chemical))?;
 
-        let multiplier = (need as f32 / reaction.product.1 as f32).ceil() as u32;
+        let multiplier = (need as f64 / reaction.product.1 as f64).ceil() as u64;
 
         for reagent in reaction.reagents.iter() {
-            supply = get(&reagent.0, reagent.1 * multiplier, reactions, supply)?;
+            get(
+                &reagent.0,
+                reagent
+                    .1
+                    .checked_mul(multiplier)
+                    .ok_or_else(|| format!("{:?} * {} (need {})", reaction, multiplier, need))?,
+                reactions,
+                supply,
+            )?;
         }
 
         let product = multiplier * reaction.product.1;
@@ -61,7 +88,7 @@ fn get<'a>(
         }
     }
 
-    Ok(supply)
+    Ok(())
 }
 
 fn parse(input: &str) -> Result<Reactions, String> {
@@ -72,10 +99,10 @@ fn parse(input: &str) -> Result<Reactions, String> {
         .collect::<Result<_, _>>()
 }
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct Supply<'a> {
-    chemicals: HashMap<Chemical<'a>, u32>,
-    ore_required: u32,
+    chemicals: HashMap<Chemical<'a>, u64>,
+    ore_required: u64,
 }
 
 #[derive(Debug)]
@@ -129,7 +156,7 @@ impl<'a> Chemical<'a> {
 
 #[cfg(test)]
 mod test {
-    use super::part1;
+    use super::{part1, part2};
 
     #[test]
     fn part1_examples() {
@@ -143,5 +170,17 @@ mod test {
     #[test]
     fn part1_solution() {
         assert_eq!(Ok(1037742), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_examples() {
+        assert_eq!(Ok(82892753), part2(include_str!("test3.txt")));
+        assert_eq!(Ok(5586022), part2(include_str!("test4.txt")));
+        assert_eq!(Ok(460664), part2(include_str!("test5.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(1572358), part2(include_str!("input.txt")));
     }
 }
