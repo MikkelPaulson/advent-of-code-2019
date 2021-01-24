@@ -4,6 +4,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
     part1_phases(input, 100)
 }
 
+pub fn part2(_input: &str) -> Result<usize, String> {
+    Err("Incomplete".to_string())
+}
+
 fn part1_phases(input: &str, phases: u8) -> Result<usize, String> {
     let mut digits = parse(input)?;
     let mut temp: Vec<u8> = Vec::with_capacity(digits.len());
@@ -54,7 +58,7 @@ fn parse(input: &str) -> Result<Vec<u8>, String> {
 
 #[cfg(test)]
 mod test {
-    use super::{part1, part1_phases};
+    use super::{part1, part1_phases, part2};
 
     #[test]
     fn part1_examples() {
@@ -71,5 +75,18 @@ mod test {
     #[ignore]
     fn part1_solution() {
         assert_eq!(Ok(96136976), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_examples() {
+        assert_eq!(Ok(84462026), part2("03036732577212944063491565474664"));
+        assert_eq!(Ok(78725270), part2("02935109699940807407585447034323"));
+        assert_eq!(Ok(53553731), part2("03081770884921959731165446850517"));
+    }
+
+    #[test]
+    #[ignore]
+    fn part2_solution() {
+        assert_eq!(Ok(0), part2(include_str!("input.txt")));
     }
 }
