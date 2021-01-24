@@ -1,6 +1,7 @@
 use std::cmp;
 use std::collections::HashSet;
 use std::fmt;
+use std::iter;
 use std::ops;
 
 use super::math::gcd;
@@ -56,6 +57,30 @@ pub struct Coord {
     pub y: isize,
 }
 
+impl Coord {
+    pub const ORIGIN: Self = Self { x: 0, y: 0 };
+
+    pub fn min(&self, other: &Self) -> Self {
+        Self {
+            x: self.x.min(other.x),
+            y: self.y.min(other.y),
+        }
+    }
+
+    pub fn max(&self, other: &Self) -> Self {
+        Self {
+            x: self.x.max(other.x),
+            y: self.y.max(other.y),
+        }
+    }
+}
+
+impl fmt::Display for Coord {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
 impl From<[usize; 2]> for Coord {
     fn from(data: [usize; 2]) -> Coord {
         Self {
@@ -82,6 +107,13 @@ impl ops::Add<CoordDiff> for Coord {
             x: self.x + other.x,
             y: self.y + other.y,
         }
+    }
+}
+
+impl ops::AddAssign<CoordDiff> for Coord {
+    fn add_assign(&mut self, other: CoordDiff) {
+        self.x += other.x;
+        self.y += other.y;
     }
 }
 
@@ -139,5 +171,47 @@ impl cmp::Ord for CoordDiff {
 impl cmp::PartialOrd for CoordDiff {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+pub struct CoordMap {
+    max: Coord,
+    min: Coord,
+    next: Option<Coord>,
+}
+
+impl CoordMap {
+    pub fn new(min: Coord, max: Coord) -> Self {
+        Self {
+            max,
+            min,
+            next: Some(min),
+        }
+    }
+}
+
+impl iter::Iterator for CoordMap {
+    type Item = Coord;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(coord) = self.next.take() {
+            self.next = if coord == self.max {
+                None
+            } else if coord.x == self.max.x {
+                Some(Coord {
+                    x: self.min.x,
+                    y: coord.y + 1,
+                })
+            } else {
+                Some(Coord {
+                    x: coord.x + 1,
+                    y: coord.y,
+                })
+            };
+
+            Some(coord)
+        } else {
+            None
+        }
     }
 }
