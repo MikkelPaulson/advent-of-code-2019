@@ -215,3 +215,51 @@ impl iter::Iterator for CoordMap {
         }
     }
 }
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum Direction {
+    North,
+    East,
+    South,
+    West,
+}
+
+impl Direction {
+    pub const ALL: &'static [Direction] = &[
+        Direction::North,
+        Direction::East,
+        Direction::South,
+        Direction::West,
+    ];
+
+    pub fn reverse(&self) -> Direction {
+        match *self {
+            Direction::North => Direction::South,
+            Direction::East => Direction::West,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+        }
+    }
+}
+
+impl From<Direction> for CoordDiff {
+    fn from(direction: Direction) -> Self {
+        match direction {
+            Direction::North => CoordDiff { x: 0, y: -1 },
+            Direction::East => CoordDiff { x: 1, y: 0 },
+            Direction::South => CoordDiff { x: 0, y: 1 },
+            Direction::West => CoordDiff { x: -1, y: 0 },
+        }
+    }
+}
+
+impl From<Direction> for isize {
+    fn from(direction: Direction) -> Self {
+        match direction {
+            Direction::North => 1,
+            Direction::East => 4,
+            Direction::South => 2,
+            Direction::West => 3,
+        }
+    }
+}

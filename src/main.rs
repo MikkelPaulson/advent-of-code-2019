@@ -25,6 +25,7 @@ mod day9;
 mod intcode;
 mod map;
 mod math;
+mod maze;
 
 fn main() -> Result<(), String> {
     let puzzle: Puzzle = env::args()
