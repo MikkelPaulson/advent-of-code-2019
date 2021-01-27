@@ -117,11 +117,22 @@ impl ops::AddAssign<CoordDiff> for Coord {
     }
 }
 
-impl ops::Sub for Coord {
+impl ops::Sub<Coord> for Coord {
     type Output = CoordDiff;
 
     fn sub(self, other: Self) -> Self::Output {
         CoordDiff {
+            x: self.x - other.x,
+            y: self.y - other.y,
+        }
+    }
+}
+
+impl ops::Sub<CoordDiff> for Coord {
+    type Output = Self;
+
+    fn sub(self, other: CoordDiff) -> Self::Output {
+        Coord {
             x: self.x - other.x,
             y: self.y - other.y,
         }
