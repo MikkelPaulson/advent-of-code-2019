@@ -4,7 +4,7 @@ use std::ops;
 
 use crate::map::{Coord, CoordMap, Direction};
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Maze(HashMap<Coord, Tile>);
 
 impl Maze {
@@ -31,13 +31,22 @@ impl Maze {
     }
 
     pub fn explore_step(&self, explored: &mut HashSet<Coord>, edges: &mut HashSet<Coord>) {
+        self.explore_step_with_overlay(explored, edges, &HashMap::default())
+    }
+
+    pub fn explore_step_with_overlay(
+        &self,
+        explored: &mut HashSet<Coord>,
+        edges: &mut HashSet<Coord>,
+        tiles: &HashMap<Coord, Tile>,
+    ) {
         let mut new_edges = HashSet::with_capacity(edges.len());
 
         for edge in edges.iter() {
             for &direction in Direction::ALL {
                 let target = *edge + direction.into();
 
-                if let Some(&Tile::Floor) = self.get(&target) {
+                if let Some(&Tile::Floor) = tiles.get(&target).or(self.get(&target)) {
                     if !explored.contains(&target) {
                         new_edges.insert(target);
                         explored.insert(target);

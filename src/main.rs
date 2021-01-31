@@ -1,5 +1,6 @@
 use std::env;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
 use std::str;
 
@@ -55,7 +56,7 @@ impl Puzzle {
     }
 
     pub fn run(&self) -> Result<usize, String> {
-        let input = self.get_input();
+        let input = self.get_input()?;
 
         match (self.day, self.part) {
             (1, 1) => day1::part1(&input),
@@ -101,15 +102,22 @@ impl Puzzle {
         }
     }
 
-    fn get_input(&self) -> String {
+    fn get_input(&self) -> Result<String, String> {
         let mut buffer = String::new();
 
-        File::open(format!("src/day{}/input.txt", self.day))
-            .unwrap()
-            .read_to_string(&mut buffer)
-            .unwrap();
+        if atty::is(atty::Stream::Stdin) {
+            File::open(format!("src/day{}/input.txt", self.day))
+                .map_err(|e| format!("{}", e))?
+                .read_to_string(&mut buffer)
+                .map_err(|e| format!("{}", e))?;
+        } else {
+            let mut stdin = io::stdin();
+            stdin
+                .read_to_string(&mut buffer)
+                .map_err(|e| format!("{}", e))?;
+        }
 
-        buffer
+        Ok(buffer)
     }
 }
 
