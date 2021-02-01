@@ -17,7 +17,7 @@ impl Maze {
         let mut distance = 0;
 
         loop {
-            if explored.contains(&destination) {
+            if edges.contains(&destination) {
                 break Some(distance);
             }
 
@@ -56,6 +56,7 @@ impl Maze {
         }
 
         mem::swap(edges, &mut new_edges);
+        mem::swap(explored, &mut new_edges);
     }
 
     pub fn display_with_overlay<F: Fn(&Coord) -> Option<char>>(&self, overlay: F) -> String {
@@ -72,6 +73,7 @@ impl Maze {
                         None => ' ',
                         Some(Tile::Wall) => '#',
                         Some(Tile::Floor) => '.',
+                        Some(Tile::Door(c)) => *c,
                     }
                 });
 
@@ -122,4 +124,5 @@ impl ops::DerefMut for Maze {
 pub enum Tile {
     Wall,
     Floor,
+    Door(char),
 }

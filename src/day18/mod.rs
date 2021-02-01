@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::mem;
 
 use super::map::{Coord, CoordDiff};
 use super::maze::{Maze, Tile};
@@ -6,109 +7,161 @@ use super::maze::{Maze, Tile};
 pub fn part1(input: &str) -> Result<usize, String> {
     let (maze, key_doors) = parse(input)?;
 
-    println!(
-        "{}",
-        maze.display_with_overlay(|coord| if coord == &Coord::ORIGIN {
-            Some('@')
-        } else {
-            None
-        })
-    );
+    let (distance, sequence) = explore(Coord::ORIGIN, &maze, &key_doors)?;
 
-    let (path, length) = explore(Coord::ORIGIN, &maze, key_doors, None, 0)
-        .ok_or_else(|| "No paths found.".to_string())?;
+    let sequence_pretty = {
+        let mut sequence_pretty = String::with_capacity(sequence.len() * 3);
+        if let Some(first) = sequence.get(0) {
+            sequence_pretty.push(*first);
+            for c in &sequence[1..] {
+                sequence_pretty.push_str(", ");
+                sequence_pretty.push(*c);
+            }
+        }
+        sequence_pretty
+    };
 
-    println!(
-        "Shortest path is {} at {} moves.",
-        path.chars().rev().collect::<String>(),
-        length
-    );
+    println!("Shortest path is {} steps: {}", distance, sequence_pretty);
 
-    Ok(length)
+    Ok(distance)
 }
 
 type KeyDoor = HashMap<Coord, (char, Option<Coord>)>;
 
+#[derive(Debug, Default, Clone)]
+struct MazeState {
+    keys: Vec<char>,
+    key_string: String,
+    explored: HashSet<Coord>,
+    edges: HashSet<Coord>,
+    overlay: HashMap<Coord, Tile>,
+}
+
 fn explore(
-    start_point: Coord,
+    start_coord: Coord,
     maze: &Maze,
-    key_doors: KeyDoor,
-    high_score: Option<usize>,
-    mut distance: usize,
-) -> Option<(String, usize)> {
-    if let Some(i) = high_score {
-        println!("Shortest is {}, I have {}.", i, distance);
-    }
+    key_doors: &KeyDoor,
+) -> Result<(usize, Vec<char>), String> {
+    let mut maze_states = {
+        let mut maze_states = Vec::new();
 
-    let (mut explored, mut edges) = (HashSet::new(), HashSet::new());
-    let mut best_path = None;
-    let high_score = high_score.unwrap_or(std::usize::MAX);
+        let mut starting_state = MazeState::default();
+        starting_state.explored.insert(start_coord);
+        starting_state.edges.insert(start_coord);
 
-    let keys = key_doors.keys().copied().collect();
-    let door_tiles = key_doors
-        .values()
-        .filter_map(|(_, coord)| coord.map(|coord| (coord, Tile::Wall)))
-        .collect();
+        maze_states.push(starting_state);
+        maze_states
+    };
+    let mut maze_states_next = Vec::new();
 
-    explored.insert(start_point);
-    edges.insert(start_point);
+    let key_coords: HashSet<Coord> = key_doors.keys().copied().collect();
+    let mut explored: HashMap<String, HashSet<Coord>> = HashMap::new();
 
-    while edges.len() > 0 && distance < high_score {
-        // Are any keys found in this iteration?
-        for key_coord in edges.intersection(&keys) {
-            // I just picked up the last key! Short-circuit the rest of the logic.
-            if keys.len() == 1 {
-                return Some((key_doors.get(key_coord).unwrap().0.to_string(), distance));
-            }
+    let mut steps = 0;
 
-            let mut key_doors_clone = key_doors.clone();
-            let (label, _) = key_doors_clone.remove(key_coord).unwrap();
+    while !maze_states.is_empty() {
+        steps += 1;
 
+        println!("Step {}, tracking {} states.", steps, maze_states.len());
+        if let Some(maze_state) = if steps % 2 == 0 {
+            maze_states.first()
+        } else {
+            maze_states.last()
+        } {
             println!(
-                "{}",
-                maze.display_with_overlay(|coord| {
-                    if coord == &start_point {
-                        Some('@')
-                    } else if let Some((symbol, _)) = key_doors.get(coord) {
-                        Some(if coord == key_coord {
-                            symbol.to_ascii_uppercase()
-                        } else {
-                            *symbol
-                        })
-                    } else if explored.contains(coord) {
-                        Some('+')
-                    } else {
+                "{:?}\n{}",
+                maze_state,
+                maze.display_with_overlay(|coord| if maze_state.edges.contains(coord) {
+                    Some('@')
+                } else if maze_state.explored.contains(coord) {
+                    Some('+')
+                } else if maze_state.overlay.contains_key(coord) {
+                    Some('.')
+                } else if let Some((c, _)) = key_doors.get(coord) {
+                    if maze_state.keys.iter().any(|fc| c == fc) {
                         None
+                    } else {
+                        Some(*c)
                     }
+                } else {
+                    None
                 })
             );
+        }
 
-            // Explore a new route from this location.
-            if let Some(mut other_path) = explore(
-                *key_coord,
-                maze,
-                key_doors_clone,
-                best_path.clone().map(|(_, i)| i),
-                distance,
-            ) {
-                other_path.0.push(label);
-                best_path = Some(other_path);
+        while let Some(mut maze_state) = maze_states.pop() {
+            if let Some(coords) = explored.get_mut(&maze_state.key_string) {
+                if !coords.is_disjoint(&maze_state.edges) {
+                    maze_state.edges = maze_state.edges.difference(&coords).copied().collect();
+                    maze_state.edges.iter().for_each(|coord| {
+                        coords.insert(*coord);
+                    });
+                }
+            } else {
+                explored.insert(maze_state.key_string.clone(), maze_state.edges.clone());
+            }
+
+            maze.explore_step_with_overlay(
+                &mut maze_state.explored,
+                &mut maze_state.edges,
+                &maze_state.overlay,
+            );
+
+            // Are we picking up any keys on this pass?
+            for key_coord in maze_state
+                .edges
+                .intersection(&key_coords)
+                .copied()
+                .collect::<Vec<Coord>>()
+            {
+                if let Some((c, _)) = key_doors.get(&key_coord) {
+                    // Already have this key
+                    if maze_state.key_string.contains(&[*c][..]) {
+                        continue;
+                    }
+                }
+
+                let mut new_state = MazeState::default();
+
+                new_state.keys = maze_state.keys.clone();
+                new_state.overlay = maze_state.overlay.clone();
+
+                if let Some((c, door_coord_opt)) = key_doors.get(&key_coord) {
+                    new_state.keys.push(*c);
+
+                    if let Some(door_coord) = door_coord_opt {
+                        new_state.overlay.insert(*door_coord, Tile::Floor);
+                    }
+                }
+
+                new_state.key_string = {
+                    let mut keys_sorted = new_state.keys.clone();
+                    keys_sorted.sort();
+                    keys_sorted.iter().collect()
+                };
+
+                // Just picked up the last key!
+                if new_state.keys.len() == key_doors.len() {
+                    return Ok((steps, new_state.keys));
+                }
+
+                new_state.explored.insert(key_coord);
+                new_state.edges.insert(key_coord);
+
+                maze_state.edges.remove(&key_coord);
+                maze_states_next.push(new_state);
+            }
+
+            // Only continue exploring if we haven't exhausted the possibilities.
+            if !maze_state.edges.is_empty() {
+                maze_states_next.push(maze_state);
             }
         }
 
-        distance += 1;
-        maze.explore_step_with_overlay(&mut explored, &mut edges, &door_tiles);
+        mem::swap(&mut maze_states, &mut maze_states_next);
     }
 
-    if let Some(path) = best_path {
-        if path.1 <= high_score {
-            Some(path)
-        } else {
-            None
-        }
-    } else {
-        None
-    }
+    Err("No path to end!".to_string())
 }
 
 fn parse(input: &str) -> Result<(Maze, KeyDoor), String> {
@@ -125,28 +178,27 @@ fn parse(input: &str) -> Result<(Maze, KeyDoor), String> {
             continue;
         }
 
-        raw_maze.insert(
-            coord,
-            match raw_tile {
-                '#' => Tile::Wall,
-                '.' => Tile::Floor,
-                '@' => {
-                    offset = coord - Coord::ORIGIN;
-                    Tile::Floor
-                }
-                c if c.is_uppercase() => {
-                    doors.insert(c.to_ascii_lowercase(), coord);
-                    Tile::Floor
-                }
-                c if c.is_lowercase() => {
-                    keys.insert(c, coord);
-                    Tile::Floor
-                }
-                c => {
-                    return Err(format!("Invalid character: {:?}", c));
-                }
-            },
-        );
+        if let Some(tile) = match raw_tile {
+            '#' => None,
+            '.' => Some(Tile::Floor),
+            '@' => {
+                offset = coord - Coord::ORIGIN;
+                Some(Tile::Floor)
+            }
+            c if c.is_uppercase() => {
+                doors.insert(c.to_ascii_lowercase(), coord);
+                Some(Tile::Door(c))
+            }
+            c if c.is_lowercase() => {
+                keys.insert(c, coord);
+                Some(Tile::Floor)
+            }
+            c => {
+                return Err(format!("Invalid character: {:?}", c));
+            }
+        } {
+            raw_maze.insert(coord, tile);
+        }
 
         coord.x += 1;
     }
@@ -176,13 +228,18 @@ mod test {
         assert_eq!(Ok(8), part1(include_str!("test1.txt")));
         assert_eq!(Ok(86), part1(include_str!("test2.txt")));
         assert_eq!(Ok(132), part1(include_str!("test3.txt")));
-        assert_eq!(Ok(136), part1(include_str!("test4.txt")));
         assert_eq!(Ok(81), part1(include_str!("test5.txt")));
     }
 
     #[test]
     #[ignore]
+    fn part1_examples_slow() {
+        assert_eq!(Ok(136), part1(include_str!("test4.txt")));
+    }
+
+    #[test]
+    #[ignore]
     fn part1_solution() {
-        assert_eq!(Ok(0), part1(include_str!("input.txt")));
+        assert_eq!(Ok(4676), part1(include_str!("input.txt")));
     }
 }
