@@ -73,7 +73,7 @@ impl Maze {
                         None => ' ',
                         Some(Tile::Wall) => '#',
                         Some(Tile::Floor) => '.',
-                        Some(Tile::Door(c)) => *c,
+                        Some(Tile::Door(c)) => c.to_ascii_uppercase(),
                     }
                 });
 
