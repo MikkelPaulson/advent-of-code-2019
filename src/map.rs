@@ -148,6 +148,13 @@ pub struct CoordDiff {
 impl CoordDiff {
     pub const ZERO: CoordDiff = CoordDiff { x: 0, y: 0 };
 
+    pub const DIRECTIONS: [Self; 4] = [
+        Self { x: -1, y: 0 },
+        Self { x: 0, y: -1 },
+        Self { x: 1, y: 0 },
+        Self { x: 0, y: 1 },
+    ];
+
     pub fn reduce(&self) -> CoordDiff {
         let gcd = gcd(self.x.abs(), self.y.abs());
         CoordDiff {

@@ -9,6 +9,15 @@ pub struct Maze(HashMap<Coord, Tile>);
 
 impl Maze {
     pub fn get_path_len(&self, origin: Coord, destination: Coord) -> Option<u32> {
+        self.get_path_len_with_overlay(origin, destination, &HashMap::new())
+    }
+
+    pub fn get_path_len_with_overlay(
+        &self,
+        origin: Coord,
+        destination: Coord,
+        tiles: &HashMap<Coord, Tile>,
+    ) -> Option<u32> {
         let (mut explored, mut edges) = (HashSet::new(), HashSet::new());
 
         explored.insert(origin);
@@ -25,13 +34,13 @@ impl Maze {
                 break None;
             }
 
-            self.explore_step(&mut explored, &mut edges);
+            self.explore_step_with_overlay(&mut explored, &mut edges, tiles);
             distance += 1;
         }
     }
 
     pub fn explore_step(&self, explored: &mut HashSet<Coord>, edges: &mut HashSet<Coord>) {
-        self.explore_step_with_overlay(explored, edges, &HashMap::default())
+        self.explore_step_with_overlay(explored, edges, &HashMap::new())
     }
 
     pub fn explore_step_with_overlay(
