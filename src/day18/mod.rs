@@ -31,7 +31,8 @@ pub fn part2(input: &str) -> Result<usize, String> {
     );
 
     let mut routes = BinaryHeap::new();
-    routes.push(get_route(&maze, &key_doors));
+    let (route, _key_paths) = get_route(&maze, &key_doors);
+    routes.push(route);
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
     let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
@@ -42,20 +43,21 @@ pub fn part2(input: &str) -> Result<usize, String> {
         .collect();
 
     while let Some(route) = routes.pop() {
-        let distance = route.get_distance();
-        if last_distance < distance {
-            println!(
-                "Min length of {} routes is {}: {:?}",
-                routes.len() + 1,
-                distance,
-                route
-            );
-            last_distance = distance;
+        {
+            if last_distance < route.distance {
+                println!(
+                    "Min length of {} routes is {}: {:?}",
+                    routes.len() + 1,
+                    route.distance,
+                    route
+                );
+                last_distance = route.distance;
+            }
         }
 
         // If the shortest route on the heap has collected all keys, we're done!
         if route.quadrants.iter().all(|q| q.key_paths.is_empty()) {
-            return Ok(route.get_distance() as usize);
+            return Ok(route.distance as usize);
         }
 
         for (i, quadrant) in route.quadrants.iter().enumerate() {
@@ -85,7 +87,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
                         if path_trimmed.is_empty() {
                             None
                         } else {
-                            Some(path_trimmed.to_string())
+                            Some(path_trimmed)
                         }
                     })
                     .collect();
@@ -94,7 +96,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
                     .get(&key)
                     .ok_or_else(|| format!("Key {} not found", key))?;
 
-                route.quadrants[i].distance += path_cache
+                route.distance += path_cache
                     .entry([quadrant.location, route.quadrants[i].location])
                     .or_insert_with(|| {
                         maze.get_path_len_with_overlay(
@@ -114,9 +116,9 @@ pub fn part2(input: &str) -> Result<usize, String> {
     Err("No route found.".to_string())
 }
 
-fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
-    let mut paths = Vec::new();
+fn get_route<'a>(maze: &Maze, key_doors: &KeyDoor) -> (Route<'a>, String) {
     let mut route = Route::default();
+    let mut quadrant_paths: [Vec<String>; 4] = [Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
     let mut maze_states = Vec::new();
     let mut maze_states_next = Vec::new();
@@ -126,6 +128,8 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
         .enumerate()
     {
         let quadrant = &mut route.quadrants[i];
+        let mut paths = Vec::new();
+
         quadrant.location = cursor.to_owned().into();
 
         let mut maze_state = MazeState::default();
@@ -170,51 +174,58 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
 
         paths.sort();
         while let Some(path) = paths.pop() {
-            match quadrant.key_paths.last() {
+            match quadrant_paths[i].last() {
                 Some(key_path) => {
                     if !key_path.starts_with(&path) {
-                        quadrant.key_paths.push(path);
+                        quadrant_paths[i].push(path);
                     }
                 }
-                None => quadrant.key_paths.push(path),
+                None => quadrant_paths[i].push(path),
             }
         }
 
         println!("{:?}", quadrant);
     }
 
-    route
+    // Produce the String blob to store in memory.
+    let path_blob: String = quadrant_paths.iter().flatten().cloned().collect();
+
+    // Populate the slices in our quadrants from the blob.
+    for i in 0..4 {
+        for path in quadrant_paths[i].drain(..) {
+            route.quadrants[i]
+                .key_paths
+                .push(&path_blob[(path_blob.find(&path).unwrap())..(path.len())]);
+        }
+    }
+
+    let result = (route, path_blob);
+    result
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-struct Route {
+struct Route<'a> {
     open_doors: HashSet<char>,
-    quadrants: [Quadrant; 4],
+    quadrants: [Quadrant<'a>; 4],
+    distance: u32,
 }
 
-impl Route {
-    pub fn get_distance(&self) -> u32 {
-        self.quadrants.iter().fold(0, |acc, q| acc + q.distance)
-    }
-}
-
-impl cmp::Ord for Route {
+impl cmp::Ord for Route<'_> {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.get_distance().cmp(&other.get_distance()).reverse()
+        self.distance.cmp(&other.distance).reverse()
     }
 }
 
-impl cmp::PartialOrd for Route {
+impl cmp::PartialOrd for Route<'_> {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-struct Quadrant {
-    key_paths: Vec<String>,
+struct Quadrant<'a> {
+    key_paths: Vec<&'a str>,
     location: Coord,
-    distance: u32,
 }
 
 type KeyDoor = HashMap<Coord, (char, Option<Coord>)>;
