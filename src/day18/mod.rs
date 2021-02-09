@@ -34,21 +34,24 @@ pub fn part2(input: &str) -> Result<usize, String> {
     routes.push(get_route(&maze, &key_doors));
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
+    let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
+    let mut last_distance = 0;
     let open_all_doors: HashMap<Coord, Tile> = key_doors
         .values()
         .filter_map(|(_, opt)| opt.map(|coord| (coord, Tile::Floor)))
         .collect();
 
     while let Some(route) = routes.pop() {
-        if routes.len() > 5000 {
-            panic!();
+        let distance = route.get_distance();
+        if last_distance < distance {
+            println!(
+                "Min length of {} routes is {}: {:?}",
+                routes.len() + 1,
+                distance,
+                route
+            );
+            last_distance = distance;
         }
-        println!(
-            "Min length of {} routes is {}: {:?}",
-            routes.len() + 1,
-            route.get_distance(),
-            route
-        );
 
         // If the shortest route on the heap has collected all keys, we're done!
         if route.quadrants.iter().all(|q| q.key_paths.is_empty()) {
@@ -91,18 +94,17 @@ pub fn part2(input: &str) -> Result<usize, String> {
                     .get(&key)
                     .ok_or_else(|| format!("Key {} not found", key))?;
 
-                route.quadrants[i].distance += maze
-                    .get_path_len_with_overlay(
-                        quadrant.location,
-                        route.quadrants[i].location,
-                        &open_all_doors,
-                    )
-                    .ok_or_else(|| {
-                        format!(
-                            "No path from {:?} to {:?} to get key {}!",
-                            quadrant.location, route.quadrants[i].location, key
+                route.quadrants[i].distance += path_cache
+                    .entry([quadrant.location, route.quadrants[i].location])
+                    .or_insert_with(|| {
+                        maze.get_path_len_with_overlay(
+                            quadrant.location,
+                            route.quadrants[i].location,
+                            &open_all_doors,
                         )
-                    })?;
+                        .unwrap()
+                    })
+                    .to_owned();
 
                 routes.push(route);
             }
