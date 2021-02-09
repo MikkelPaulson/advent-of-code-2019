@@ -1,6 +1,7 @@
 use std::cmp;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::mem;
+use std::rc::Rc;
 
 use super::map::{Coord, CoordDiff};
 use super::maze::{Maze, Tile};
@@ -42,21 +43,22 @@ pub fn part2(input: &str) -> Result<usize, String> {
         .collect();
 
     while let Some(route) = routes.pop() {
-        let distance = route.get_distance();
-        if last_distance < distance {
+        if last_distance < route.distance {
             println!(
                 "Min length of {} routes is {}: {:?}",
                 routes.len() + 1,
-                distance,
+                route.distance,
                 route
             );
-            last_distance = distance;
+            last_distance = route.distance;
+
+            if last_distance >= 800 {
+                panic!();
+            }
         }
 
         // If the shortest route on the heap has collected all keys, we're done!
-        if route.quadrants.iter().all(|q| q.key_paths.is_empty()) {
-            return Ok(route.get_distance() as usize);
-        }
+        let mut key_option_count = 0;
 
         for (i, quadrant) in route.quadrants.iter().enumerate() {
             let mut key_options: HashSet<char> = quadrant
@@ -69,32 +71,19 @@ pub fn part2(input: &str) -> Result<usize, String> {
                         .filter(|c| c.is_ascii_lowercase())
                 })
                 .collect();
+            key_option_count += key_options.len();
 
             for key in key_options.drain() {
                 let mut route = route.clone();
 
+                route.open_doors.insert(key);
                 route.open_doors.insert(key.to_ascii_uppercase());
-
-                route.quadrants[i].key_paths = quadrant
-                    .key_paths
-                    .iter()
-                    .filter_map(|path| {
-                        let path_trimmed = path.trim_start_matches(|c: char| {
-                            route.open_doors.contains(&c) || c == key
-                        });
-                        if path_trimmed.is_empty() {
-                            None
-                        } else {
-                            Some(path_trimmed.to_string())
-                        }
-                    })
-                    .collect();
 
                 route.quadrants[i].location = *key_coords
                     .get(&key)
                     .ok_or_else(|| format!("Key {} not found", key))?;
 
-                route.quadrants[i].distance += path_cache
+                route.distance += path_cache
                     .entry([quadrant.location, route.quadrants[i].location])
                     .or_insert_with(|| {
                         maze.get_path_len_with_overlay(
@@ -108,6 +97,19 @@ pub fn part2(input: &str) -> Result<usize, String> {
 
                 routes.push(route);
             }
+        }
+
+        if key_option_count == 0 {
+            return if route.quadrants.iter().any(|q| {
+                q.key_paths.iter().any(|p| {
+                    !p.trim_start_matches(|c: char| route.open_doors.contains(&c))
+                        .is_empty()
+                })
+            }) {
+                Err(format!("Ran out of available keys: {:?}", route))
+            } else {
+                Ok(route.distance as usize)
+            };
         }
     }
 
@@ -169,16 +171,19 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
         }
 
         paths.sort();
+        let mut key_paths: Vec<String> = Vec::new();
         while let Some(path) = paths.pop() {
-            match quadrant.key_paths.last() {
+            match key_paths.last() {
                 Some(key_path) => {
                     if !key_path.starts_with(&path) {
-                        quadrant.key_paths.push(path);
+                        key_paths.push(path);
                     }
                 }
-                None => quadrant.key_paths.push(path),
+                None => key_paths.push(path),
             }
         }
+
+        quadrant.key_paths = Rc::new(key_paths);
 
         println!("{:?}", quadrant);
     }
@@ -190,17 +195,12 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
 struct Route {
     open_doors: HashSet<char>,
     quadrants: [Quadrant; 4],
-}
-
-impl Route {
-    pub fn get_distance(&self) -> u32 {
-        self.quadrants.iter().fold(0, |acc, q| acc + q.distance)
-    }
+    distance: u32,
 }
 
 impl cmp::Ord for Route {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.get_distance().cmp(&other.get_distance()).reverse()
+        self.distance.cmp(&other.distance).reverse()
     }
 }
 
@@ -212,9 +212,8 @@ impl cmp::PartialOrd for Route {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct Quadrant {
-    key_paths: Vec<String>,
+    key_paths: Rc<Vec<String>>,
     location: Coord,
-    distance: u32,
 }
 
 type KeyDoor = HashMap<Coord, (char, Option<Coord>)>;
