@@ -36,26 +36,19 @@ pub fn part2(input: &str) -> Result<usize, String> {
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
     let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
-    let mut last_distance = 0;
+    let mut route_cache: HashSet<(u32, u32, [Coord; 4])> = HashSet::new();
     let open_all_doors: HashMap<Coord, Tile> = key_doors
         .values()
         .filter_map(|(_, opt)| opt.map(|coord| (coord, Tile::Floor)))
         .collect();
 
     while let Some(route) = routes.pop() {
-        if last_distance < route.distance {
-            println!(
-                "Min length of {} routes is {}: {:?}",
-                routes.len() + 1,
-                route.distance,
-                route
-            );
-            last_distance = route.distance;
-
-            if last_distance >= 800 {
-                panic!();
-            }
-        }
+        println!(
+            "\n\nMin length of {} routes is {}: {:?}\n",
+            routes.len() + 1,
+            route.distance,
+            route
+        );
 
         // If the shortest route on the heap has collected all keys, we're done!
         let mut key_option_count = 0;
@@ -83,7 +76,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
                     .get(&key)
                     .ok_or_else(|| format!("Key {} not found", key))?;
 
-                route.distance += path_cache
+                let distance = path_cache
                     .entry([quadrant.location, route.quadrants[i].location])
                     .or_insert_with(|| {
                         maze.get_path_len_with_overlay(
@@ -94,8 +87,18 @@ pub fn part2(input: &str) -> Result<usize, String> {
                         .unwrap()
                     })
                     .to_owned();
+                route.distance += distance;
 
-                routes.push(route);
+                println!(
+                    "Quadrant {}: moving {} spaces from {:?} to {:?} to pick up key {}.",
+                    i, distance, quadrant.location, route.quadrants[i].location, key
+                );
+
+                if route_cache.insert(route.get_cache_key()) {
+                    routes.push(route);
+                } else {
+                    println!("Route already visited, skipping.");
+                }
             }
         }
 
@@ -196,6 +199,30 @@ struct Route {
     open_doors: HashSet<char>,
     quadrants: [Quadrant; 4],
     distance: u32,
+}
+
+impl Route {
+    pub fn get_cache_key(&self) -> (u32, u32, [Coord; 4]) {
+        (
+            self.distance,
+            self.open_doors
+                .iter()
+                .filter_map(|c| {
+                    if c.is_ascii_lowercase() {
+                        Some(1 << (*c as u8 - 'a' as u8) as u32)
+                    } else {
+                        None
+                    }
+                })
+                .sum(),
+            [
+                self.quadrants[0].location,
+                self.quadrants[1].location,
+                self.quadrants[2].location,
+                self.quadrants[3].location,
+            ],
+        )
+    }
 }
 
 impl cmp::Ord for Route {
@@ -432,8 +459,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn part2_solution() {
-        assert_eq!(Ok(4676), part2(include_str!("input.txt")));
+        assert_eq!(Ok(2066), part2(include_str!("input.txt")));
     }
 }
