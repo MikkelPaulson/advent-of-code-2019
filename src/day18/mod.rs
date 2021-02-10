@@ -1,5 +1,5 @@
 use std::cmp;
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{hash_map, BinaryHeap, HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
 
@@ -45,7 +45,7 @@ fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<usize,
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
     let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
-    let mut route_cache: HashSet<(u32, u32, Vec<Coord>)> = HashSet::new();
+    let mut route_cache: HashMap<(u32, Vec<Coord>), u32> = HashMap::new();
     let open_all_doors: HashMap<Coord, Tile> = key_doors
         .values()
         .filter_map(|(_, opt)| opt.map(|coord| (coord, Tile::Floor)))
@@ -103,10 +103,17 @@ fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<usize,
                     i, distance, section.location, route.sections[i].location, key
                 );
 
-                if route_cache.insert(route.get_cache_key()) {
-                    routes.push(route);
-                } else {
-                    println!("Route already visited, skipping.");
+                match route_cache.entry(route.get_cache_key()) {
+                    hash_map::Entry::Occupied(o) if o.get() > &route.distance => {
+                        routes.push(route);
+                    }
+                    hash_map::Entry::Occupied(_) => {
+                        println!("Route already visited, skipping.");
+                    }
+                    e => {
+                        e.or_insert(route.distance);
+                        routes.push(route);
+                    }
                 }
             }
         }
@@ -208,9 +215,8 @@ struct Route {
 }
 
 impl Route {
-    pub fn get_cache_key(&self) -> (u32, u32, Vec<Coord>) {
+    pub fn get_cache_key(&self) -> (u32, Vec<Coord>) {
         (
-            self.distance,
             self.open_doors
                 .iter()
                 .filter_map(|c| {
