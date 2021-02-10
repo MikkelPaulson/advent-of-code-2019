@@ -9,9 +9,7 @@ use super::maze::{Maze, Tile};
 pub fn part1(input: &str) -> Result<usize, String> {
     let (maze, key_doors) = parse(input)?;
 
-    let distance = explore(Coord::ORIGIN, &maze, &key_doors)?;
-
-    Ok(distance)
+    explore(&maze, &key_doors, &[Coord::ORIGIN])
 }
 
 pub fn part2(input: &str) -> Result<usize, String> {
@@ -26,20 +24,24 @@ pub fn part2(input: &str) -> Result<usize, String> {
         (maze, key_doors)
     };
 
-    println!(
-        "{}",
-        maze.display_with_overlay(|coord| key_doors.get(coord).map(|(c, _)| *c))
-    );
-
-    let mut routes = BinaryHeap::new();
-    routes.push(get_route(
+    explore(
         &maze,
         &key_doors,
         &[[-1 as isize, -1], [-1, 1], [1, -1], [1, 1]]
             .iter()
             .map(|c| c.clone().into())
             .collect::<Vec<Coord>>(),
-    ));
+    )
+}
+
+fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<usize, String> {
+    println!(
+        "{}",
+        maze.display_with_overlay(|coord| key_doors.get(coord).map(|(c, _)| *c))
+    );
+
+    let mut routes = BinaryHeap::new();
+    routes.push(get_route(maze, key_doors, cursors));
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
     let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
@@ -138,40 +140,38 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Route {
         section.location = cursor.to_owned().into();
 
         let mut maze_state = MazeState::default();
-        maze_state.explored.insert(cursor.clone().into());
-        maze_state.edges.insert(cursor.clone().into());
+        maze_state.cursor = cursor.clone();
         maze_states.push(maze_state);
+
+        let mut explored = HashSet::new();
 
         while !maze_states.is_empty() {
             for maze_state in maze_states.drain(..) {
-                if let Some(coord) = maze_state.edges.iter().last() {
-                    let mut new_coords: Vec<Coord> = CoordDiff::DIRECTIONS
-                        .iter()
-                        .map(|direction| *coord + *direction)
-                        .filter(|coord| {
-                            !maze_state.explored.contains(&coord) && maze.contains_key(&coord)
-                        })
-                        .collect();
+                println!("{:?}", maze_state);
 
-                    if new_coords.is_empty() && !maze_state.path.is_empty() {
-                        paths.push(maze_state.path.clone());
+                let mut coords: Vec<Coord> = CoordDiff::DIRECTIONS
+                    .iter()
+                    .map(|direction| maze_state.cursor + *direction)
+                    .filter(|coord| !explored.contains(coord) && maze.contains_key(coord))
+                    .collect();
+
+                if coords.is_empty() && !maze_state.path.is_empty() {
+                    paths.push(maze_state.path.clone());
+                }
+
+                for coord in coords.drain(..) {
+                    let mut maze_state = maze_state.clone();
+
+                    if let Some((c, _)) = key_doors.get(&coord) {
+                        maze_state.path.push(*c);
+                    } else if let Some(Tile::Door(c)) = maze.get(&coord) {
+                        maze_state.path.push(c.to_ascii_uppercase());
                     }
 
-                    for new_coord in new_coords.drain(..) {
-                        let mut maze_state = maze_state.clone();
+                    explored.insert(coord);
+                    maze_state.cursor = coord;
 
-                        if let Some((c, _)) = key_doors.get(&new_coord) {
-                            maze_state.path.push(*c);
-                        } else if let Some(Tile::Door(c)) = maze.get(&new_coord) {
-                            maze_state.path.push(c.to_ascii_uppercase());
-                        }
-
-                        mem::swap(&mut maze_state.explored, &mut maze_state.edges);
-                        maze_state.edges.clear();
-                        maze_state.edges.insert(new_coord);
-
-                        maze_states_next.push(maze_state);
-                    }
+                    maze_states_next.push(maze_state);
                 }
             }
             mem::swap(&mut maze_states, &mut maze_states_next);
@@ -251,133 +251,8 @@ type KeyDoor = HashMap<Coord, (char, Option<Coord>)>;
 
 #[derive(Debug, Default, Clone)]
 struct MazeState {
-    key_bitfield: u32,
-    explored: HashSet<Coord>,
-    edges: HashSet<Coord>,
-    overlay: HashMap<Coord, Tile>,
+    cursor: Coord,
     path: String,
-}
-
-fn explore(start_coord: Coord, maze: &Maze, key_doors: &KeyDoor) -> Result<usize, String> {
-    let mut maze_states = {
-        let mut maze_states = Vec::new();
-
-        let mut starting_state = MazeState::default();
-        starting_state.explored.insert(start_coord);
-        starting_state.edges.insert(start_coord);
-
-        maze_states.push(starting_state);
-        maze_states
-    };
-    let mut maze_states_next = Vec::new();
-
-    let key_coords: HashSet<Coord> = key_doors.keys().copied().collect();
-    let mut explored: HashMap<u32, HashSet<Coord>> = HashMap::new();
-
-    let mut steps = 0;
-
-    while !maze_states.is_empty() {
-        steps += 1;
-
-        if let Some(maze_state) = maze_states.first() {
-            println!(
-                "Step {}, tracking {} states.\n{:?}\n{}",
-                steps,
-                maze_states.len(),
-                maze_state,
-                maze.display_with_overlay(|coord| if maze_state.edges.contains(coord) {
-                    Some('@')
-                } else if maze_state.explored.contains(coord) {
-                    Some('+')
-                } else if maze_state.overlay.contains_key(coord) {
-                    Some('.')
-                } else if let Some((c, _)) = key_doors.get(coord) {
-                    if maze_state.key_bitfield & get_key_bit(*c) > 0 {
-                        None
-                    } else {
-                        Some(*c)
-                    }
-                } else {
-                    None
-                })
-            );
-        }
-
-        for mut maze_state in maze_states.drain(..) {
-            if let Some(coords) = explored.get_mut(&maze_state.key_bitfield) {
-                if !coords.is_disjoint(&maze_state.edges) {
-                    maze_state.edges = maze_state.edges.difference(&coords).copied().collect();
-                }
-                maze_state.edges.iter().for_each(|coord| {
-                    coords.insert(*coord);
-                });
-            } else {
-                explored.insert(maze_state.key_bitfield, maze_state.edges.clone());
-            }
-
-            maze.explore_step_with_overlay(
-                &mut maze_state.explored,
-                &mut maze_state.edges,
-                &maze_state.overlay,
-            );
-
-            // Are we picking up any keys on this pass?
-            for key_coord in maze_state
-                .edges
-                .intersection(&key_coords)
-                .copied()
-                .collect::<Vec<Coord>>()
-            {
-                if let Some((c, _)) = key_doors.get(&key_coord) {
-                    // Already have this key
-                    if maze_state.key_bitfield & get_key_bit(*c) != 0 {
-                        continue;
-                    }
-                }
-
-                let mut new_state = MazeState::default();
-
-                new_state.overlay = maze_state.overlay.clone();
-                new_state.key_bitfield = maze_state.key_bitfield;
-
-                if let Some((c, door_coord_opt)) = key_doors.get(&key_coord) {
-                    new_state.key_bitfield |= get_key_bit(*c);
-
-                    if let Some(door_coord) = door_coord_opt {
-                        new_state.overlay.insert(*door_coord, Tile::Floor);
-                    }
-                }
-
-                // Just picked up the last key!
-                if new_state.key_bitfield.count_ones() as usize == key_doors.len() {
-                    return Ok(steps);
-                }
-
-                new_state.explored.insert(key_coord);
-                new_state.edges.insert(key_coord);
-
-                maze_state.edges.remove(&key_coord);
-                maze_states_next.push(new_state);
-            }
-
-            // Only continue exploring if we haven't exhausted the possibilities.
-            if !maze_state.edges.is_empty() {
-                maze_states_next.push(maze_state);
-            }
-        }
-
-        mem::swap(&mut maze_states, &mut maze_states_next);
-    }
-
-    Err("No path to end!".to_string())
-}
-
-const fn get_key_bit(key: char) -> u32 {
-    if let 'a'..='z' = key {
-        1 << (key as u32 - 'a' as u32)
-    } else {
-        0
-    }
 }
 
 fn parse(input: &str) -> Result<(Maze, KeyDoor), String> {
