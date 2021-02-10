@@ -32,11 +32,18 @@ pub fn part2(input: &str) -> Result<usize, String> {
     );
 
     let mut routes = BinaryHeap::new();
-    routes.push(get_route(&maze, &key_doors));
+    routes.push(get_route(
+        &maze,
+        &key_doors,
+        &[[-1 as isize, -1], [-1, 1], [1, -1], [1, 1]]
+            .iter()
+            .map(|c| c.clone().into())
+            .collect::<Vec<Coord>>(),
+    ));
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
     let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
-    let mut route_cache: HashSet<(u32, u32, [Coord; 4])> = HashSet::new();
+    let mut route_cache: HashSet<(u32, u32, Vec<Coord>)> = HashSet::new();
     let open_all_doors: HashMap<Coord, Tile> = key_doors
         .values()
         .filter_map(|(_, opt)| opt.map(|coord| (coord, Tile::Floor)))
@@ -53,8 +60,8 @@ pub fn part2(input: &str) -> Result<usize, String> {
         // If the shortest route on the heap has collected all keys, we're done!
         let mut key_option_count = 0;
 
-        for (i, quadrant) in route.quadrants.iter().enumerate() {
-            let mut key_options: HashSet<char> = quadrant
+        for (i, section) in route.sections.iter().enumerate() {
+            let mut key_options: HashSet<char> = section
                 .key_paths
                 .iter()
                 .filter_map(|s| {
@@ -72,16 +79,16 @@ pub fn part2(input: &str) -> Result<usize, String> {
                 route.open_doors.insert(key);
                 route.open_doors.insert(key.to_ascii_uppercase());
 
-                route.quadrants[i].location = *key_coords
+                route.sections[i].location = *key_coords
                     .get(&key)
                     .ok_or_else(|| format!("Key {} not found", key))?;
 
                 let distance = path_cache
-                    .entry([quadrant.location, route.quadrants[i].location])
+                    .entry([section.location, route.sections[i].location])
                     .or_insert_with(|| {
                         maze.get_path_len_with_overlay(
-                            quadrant.location,
-                            route.quadrants[i].location,
+                            section.location,
+                            route.sections[i].location,
                             &open_all_doors,
                         )
                         .unwrap()
@@ -90,8 +97,8 @@ pub fn part2(input: &str) -> Result<usize, String> {
                 route.distance += distance;
 
                 println!(
-                    "Quadrant {}: moving {} spaces from {:?} to {:?} to pick up key {}.",
-                    i, distance, quadrant.location, route.quadrants[i].location, key
+                    "section {}: moving {} spaces from {:?} to {:?} to pick up key {}.",
+                    i, distance, section.location, route.sections[i].location, key
                 );
 
                 if route_cache.insert(route.get_cache_key()) {
@@ -103,7 +110,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
         }
 
         if key_option_count == 0 {
-            return if route.quadrants.iter().any(|q| {
+            return if route.sections.iter().any(|q| {
                 q.key_paths.iter().any(|p| {
                     !p.trim_start_matches(|c: char| route.open_doors.contains(&c))
                         .is_empty()
@@ -119,19 +126,16 @@ pub fn part2(input: &str) -> Result<usize, String> {
     Err("No route found.".to_string())
 }
 
-fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
+fn get_route(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Route {
     let mut paths = Vec::new();
     let mut route = Route::default();
 
     let mut maze_states = Vec::new();
     let mut maze_states_next = Vec::new();
 
-    for (i, cursor) in [[-1 as isize, -1], [-1, 1], [1, -1], [1, 1]]
-        .iter()
-        .enumerate()
-    {
-        let quadrant = &mut route.quadrants[i];
-        quadrant.location = cursor.to_owned().into();
+    for cursor in cursors {
+        let mut section = Section::default();
+        section.location = cursor.to_owned().into();
 
         let mut maze_state = MazeState::default();
         maze_state.explored.insert(cursor.clone().into());
@@ -186,9 +190,11 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
             }
         }
 
-        quadrant.key_paths = Rc::new(key_paths);
+        section.key_paths = Rc::new(key_paths);
 
-        println!("{:?}", quadrant);
+        println!("{:?}", section);
+
+        route.sections.push(section);
     }
 
     route
@@ -197,12 +203,12 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor) -> Route {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 struct Route {
     open_doors: HashSet<char>,
-    quadrants: [Quadrant; 4],
+    sections: Vec<Section>,
     distance: u32,
 }
 
 impl Route {
-    pub fn get_cache_key(&self) -> (u32, u32, [Coord; 4]) {
+    pub fn get_cache_key(&self) -> (u32, u32, Vec<Coord>) {
         (
             self.distance,
             self.open_doors
@@ -215,12 +221,10 @@ impl Route {
                     }
                 })
                 .sum(),
-            [
-                self.quadrants[0].location,
-                self.quadrants[1].location,
-                self.quadrants[2].location,
-                self.quadrants[3].location,
-            ],
+            self.sections
+                .iter()
+                .map(|section| section.location)
+                .collect(),
         )
     }
 }
@@ -238,7 +242,7 @@ impl cmp::PartialOrd for Route {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-struct Quadrant {
+struct Section {
     key_paths: Rc<Vec<String>>,
     location: Coord,
 }
