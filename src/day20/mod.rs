@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeSet, BinaryHeap, HashMap, HashSet};
 
 use super::map::{Coord, Direction};
 use super::maze::{Maze, Tile};
@@ -11,6 +11,74 @@ pub fn part1(input: &str) -> Result<usize, String> {
         maze.display_with_overlay(|c| if c == &start_coord {
             Some('@')
         } else if c == &end_coord {
+            Some('O')
+        } else {
+            None
+        })
+    );
+
+    maze.get_path_len(start_coord, end_coord)
+        .map(|i| i as usize)
+        .ok_or_else(|| format!("No path found from {} to {}.", start_coord, end_coord))
+}
+
+pub fn part2(input: &str) -> Result<usize, String> {
+    let (maze, start_coord, end_coord) = parse(input)?;
+
+    let (inner_portals, outer_portals) = {
+        let mut portals: HashSet<Coord> = HashSet::new();
+        let mut edges: HashMap<Direction, BTreeSet<isize>> = HashMap::new();
+
+        maze.iter().for_each(|(&coord, &tile)| {
+            if let Tile::Portal { direction, .. } = tile {
+                portals.insert(coord);
+                edges.entry(direction).or_default().insert(
+                    if let Direction::North | Direction::South = direction {
+                        coord.y
+                    } else {
+                        coord.x
+                    },
+                );
+            }
+        });
+
+        let (mut inner_portals, mut outer_portals) = (HashSet::new(), HashSet::new());
+        let (mut inner_x, mut inner_y) = (HashSet::new(), HashSet::new());
+
+        for (direction, coords) in edges.drain() {
+            let inner_coord = if let Direction::North | Direction::West = direction {
+                coords.iter().last()
+            } else {
+                coords.iter().next()
+            }
+            .unwrap();
+
+            if let Direction::West | Direction::East = direction {
+                inner_x.insert(*inner_coord);
+            } else {
+                inner_y.insert(*inner_coord);
+            }
+        }
+
+        portals.drain().for_each(|coord| {
+            if inner_x.contains(&coord.x) || inner_y.contains(&coord.y) {
+                inner_portals.insert(coord);
+            } else {
+                outer_portals.insert(coord);
+            }
+        });
+
+        (inner_portals, outer_portals)
+    };
+
+    println!("{:?}", inner_portals);
+    println!("{:?}", outer_portals);
+
+    println!(
+        "{}",
+        maze.display_with_overlay(|c| if inner_portals.contains(c) {
+            Some('I')
+        } else if outer_portals.contains(c) {
             Some('O')
         } else {
             None
@@ -117,7 +185,7 @@ fn parse(input: &str) -> Result<(Maze, Coord, Coord), String> {
 
 #[cfg(test)]
 mod test {
-    use super::part1;
+    use super::{part1, part2};
 
     #[test]
     fn part1_examples() {
@@ -128,5 +196,17 @@ mod test {
     #[test]
     fn part1_solution() {
         assert_eq!(Ok(482), part1(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn part2_examples() {
+        assert_eq!(Ok(0), part2(include_str!("test1.txt")));
+        assert_eq!(Err("".to_string()), part2(include_str!("test2.txt")));
+        assert_eq!(Ok(396), part2(include_str!("test3.txt")));
+    }
+
+    #[test]
+    fn part2_solution() {
+        assert_eq!(Ok(0), part2(include_str!("input.txt")));
     }
 }
