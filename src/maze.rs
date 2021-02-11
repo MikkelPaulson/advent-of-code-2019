@@ -34,6 +34,21 @@ impl Maze {
                 break None;
             }
 
+            /*
+            println!(
+                "{}",
+                self.display_with_overlay(|coord| {
+                    if edges.contains(coord) {
+                        Some('O')
+                    } else if explored.contains(coord) {
+                        Some('o')
+                    } else {
+                        None
+                    }
+                })
+            );
+            */
+
             self.explore_step_with_overlay(&mut explored, &mut edges, tiles);
             distance += 1;
         }
@@ -51,11 +66,20 @@ impl Maze {
     ) {
         let mut new_edges = HashSet::with_capacity(edges.len());
 
-        for edge in edges.iter() {
+        for edge in edges.drain() {
             for &direction in Direction::ALL {
-                let target = *edge + direction.into();
+                let target = match tiles.get(&edge).or(self.get(&edge)) {
+                    Some(&Tile::Portal {
+                        coord,
+                        direction: portal_direction,
+                    }) if portal_direction == direction => coord,
+                    Some(&Tile::Floor) | Some(&Tile::Portal { .. }) => edge + direction.into(),
+                    _ => continue,
+                };
 
-                if let Some(&Tile::Floor) = tiles.get(&target).or(self.get(&target)) {
+                if let Some(&Tile::Floor) | Some(&Tile::Portal { .. }) =
+                    tiles.get(&target).or(self.get(&target))
+                {
                     if !explored.contains(&target) {
                         new_edges.insert(target);
                         explored.insert(target);
@@ -65,7 +89,6 @@ impl Maze {
         }
 
         mem::swap(edges, &mut new_edges);
-        mem::swap(explored, &mut new_edges);
     }
 
     pub fn display_with_overlay<F: Fn(&Coord) -> Option<char>>(&self, overlay: F) -> String {
@@ -83,6 +106,22 @@ impl Maze {
                         Some(Tile::Wall) => '#',
                         Some(Tile::Floor) => '.',
                         Some(Tile::Door(c)) => c.to_ascii_uppercase(),
+                        Some(Tile::Portal {
+                            direction: Direction::North,
+                            ..
+                        }) => '^',
+                        Some(Tile::Portal {
+                            direction: Direction::South,
+                            ..
+                        }) => 'v',
+                        Some(Tile::Portal {
+                            direction: Direction::East,
+                            ..
+                        }) => '>',
+                        Some(Tile::Portal {
+                            direction: Direction::West,
+                            ..
+                        }) => '<',
                     }
                 });
 
@@ -134,4 +173,5 @@ pub enum Tile {
     Wall,
     Floor,
     Door(char),
+    Portal { coord: Coord, direction: Direction },
 }

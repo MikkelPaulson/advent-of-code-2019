@@ -16,6 +16,7 @@ mod day17;
 mod day18;
 mod day19;
 mod day2;
+mod day20;
 mod day25;
 mod day3;
 mod day4;
@@ -98,6 +99,7 @@ impl Puzzle {
             (18, 2) => day18::part2(&input),
             (19, 1) => day19::part1(&input),
             (19, 2) => day19::part2(&input),
+            (20, 1) => day20::part1(&input),
             (25, 1) => day25::part1(&input),
             (day, part) => Err(format!(
                 "Day {} part {} has not yet been implemented.",
