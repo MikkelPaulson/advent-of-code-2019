@@ -53,8 +53,8 @@ impl fmt::Display for Map {
 
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Coord {
-    pub x: isize,
-    pub y: isize,
+    pub x: i64,
+    pub y: i64,
 }
 
 impl Coord {
@@ -81,17 +81,17 @@ impl fmt::Display for Coord {
     }
 }
 
-impl From<[usize; 2]> for Coord {
-    fn from(data: [usize; 2]) -> Coord {
+impl From<[u64; 2]> for Coord {
+    fn from(data: [u64; 2]) -> Coord {
         Self {
-            x: data[0] as isize,
-            y: data[1] as isize,
+            x: data[0] as i64,
+            y: data[1] as i64,
         }
     }
 }
 
-impl From<[isize; 2]> for Coord {
-    fn from(data: [isize; 2]) -> Coord {
+impl From<[i64; 2]> for Coord {
+    fn from(data: [i64; 2]) -> Coord {
         Self {
             x: data[0],
             y: data[1],
@@ -141,8 +141,8 @@ impl ops::Sub<CoordDiff> for Coord {
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct CoordDiff {
-    pub x: isize,
-    pub y: isize,
+    pub x: i64,
+    pub y: i64,
 }
 
 impl CoordDiff {
@@ -172,8 +172,8 @@ impl CoordDiff {
         }
     }
 
-    pub fn len(&self) -> usize {
-        (self.x.abs() + self.y.abs()) as usize
+    pub fn len(&self) -> u64 {
+        (self.x.abs() + self.y.abs()) as u64
     }
 }
 
@@ -271,7 +271,7 @@ impl From<Direction> for CoordDiff {
     }
 }
 
-impl From<Direction> for isize {
+impl From<Direction> for i64 {
     fn from(direction: Direction) -> Self {
         match direction {
             Direction::North => 1,

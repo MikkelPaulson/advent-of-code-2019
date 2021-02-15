@@ -2,16 +2,16 @@ use std::cmp;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let reactions = parse(input)?;
     let mut supply = Supply::default();
 
     get(&Chemical::FUEL, 1, &reactions, &mut supply)?;
 
-    Ok(supply.ore_required as usize)
+    Ok(supply.ore_required as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let reactions = parse(input)?;
     let ore_available: u64 = 1_000_000_000_000;
 
@@ -29,7 +29,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
         }
     }
 
-    Ok(min as usize)
+    Ok(min as u64)
 }
 
 type ChemicalQuantity<'a> = (Chemical<'a>, u64);

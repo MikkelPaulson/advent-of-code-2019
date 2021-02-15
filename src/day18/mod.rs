@@ -6,13 +6,13 @@ use std::rc::Rc;
 use super::map::{Coord, CoordDiff};
 use super::maze::{Maze, Tile};
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let (maze, key_doors) = parse(input)?;
 
     explore(&maze, &key_doors, &[Coord::ORIGIN])
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     // drain_filter() isn't stable yet, so have to do this the messy way.
     let (maze, key_doors) = {
         let (mut maze, key_doors) = parse(input)?;
@@ -27,14 +27,14 @@ pub fn part2(input: &str) -> Result<usize, String> {
     explore(
         &maze,
         &key_doors,
-        &[[-1 as isize, -1], [-1, 1], [1, -1], [1, 1]]
+        &[[-1i64, -1], [-1, 1], [1, -1], [1, 1]]
             .iter()
             .map(|c| c.clone().into())
             .collect::<Vec<Coord>>(),
     )
 }
 
-fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<usize, String> {
+fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<u64, String> {
     println!(
         "{}",
         maze.display_with_overlay(|coord| key_doors.get(coord).map(|(c, _)| *c))
@@ -44,8 +44,8 @@ fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<usize,
     routes.push(get_route(maze, key_doors, cursors));
 
     let key_coords: HashMap<char, Coord> = key_doors.iter().map(|(k, (c, _))| (*c, *k)).collect();
-    let mut path_cache: HashMap<[Coord; 2], u32> = HashMap::new();
-    let mut route_cache: HashMap<(u32, Vec<Coord>), u32> = HashMap::new();
+    let mut path_cache: HashMap<[Coord; 2], u64> = HashMap::new();
+    let mut route_cache: HashMap<(u64, Vec<Coord>), u64> = HashMap::new();
     let open_all_doors: HashMap<Coord, Tile> = key_doors
         .values()
         .filter_map(|(_, opt)| opt.map(|coord| (coord, Tile::Floor)))
@@ -127,7 +127,7 @@ fn explore(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Result<usize,
             }) {
                 Err(format!("Ran out of available keys: {:?}", route))
             } else {
-                Ok(route.distance as usize)
+                Ok(route.distance)
             };
         }
     }
@@ -211,17 +211,17 @@ fn get_route(maze: &Maze, key_doors: &KeyDoor, cursors: &[Coord]) -> Route {
 struct Route {
     open_doors: HashSet<char>,
     sections: Vec<Section>,
-    distance: u32,
+    distance: u64,
 }
 
 impl Route {
-    pub fn get_cache_key(&self) -> (u32, Vec<Coord>) {
+    pub fn get_cache_key(&self) -> (u64, Vec<Coord>) {
         (
             self.open_doors
                 .iter()
                 .filter_map(|c| {
                     if c.is_ascii_lowercase() {
-                        Some(1 << (*c as u8 - 'a' as u8) as u32)
+                        Some(1 << (*c as u8 - 'a' as u8) as u64)
                     } else {
                         None
                     }

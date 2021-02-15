@@ -1,6 +1,6 @@
 use crate::intcode::{Intcode, Response};
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut max = 0;
     let intcode: Intcode = input.parse()?;
 
@@ -28,10 +28,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
         }
     }
 
-    Ok(max as usize)
+    Ok(max as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let mut max = 0;
     let intcode: Intcode = input.parse()?;
 
@@ -53,24 +53,24 @@ pub fn part2(input: &str) -> Result<usize, String> {
         }
     }
 
-    Ok(max as usize)
+    Ok(max as u64)
 }
 
-struct Signal(isize);
+struct Signal(i64);
 
 impl Signal {
     pub fn new() -> Self {
         Self(0)
     }
 
-    pub fn amplify(&mut self, intcode: &Intcode, phase: isize) -> &mut Self {
+    pub fn amplify(&mut self, intcode: &Intcode, phase: i64) -> &mut Self {
         let mut intcode = intcode.clone().with_input(&[phase, self.0]);
         intcode.run();
         self.0 = intcode.output.pop().unwrap();
         self
     }
 
-    pub fn feedback(intcode: &Intcode, phases: [isize; 5]) -> isize {
+    pub fn feedback(intcode: &Intcode, phases: [i64; 5]) -> i64 {
         let mut amplifiers = [
             intcode.clone().with_input(&phases[0..1]),
             intcode.clone().with_input(&phases[1..2]),
@@ -96,7 +96,7 @@ impl Signal {
         }
     }
 
-    pub fn get_output(&self) -> isize {
+    pub fn get_output(&self) -> i64 {
         self.0
     }
 }

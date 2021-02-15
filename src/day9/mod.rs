@@ -1,6 +1,6 @@
 use crate::intcode::Intcode;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut intcode = input.parse::<Intcode>()?;
 
     intcode.input.push(1);
@@ -12,10 +12,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
         .output
         .pop()
         .ok_or_else(|| "No output.".to_string())
-        .map(|n| n as usize)
+        .map(|n| n as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let mut intcode = input.parse::<Intcode>()?;
 
     intcode.input.push(2);
@@ -27,7 +27,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
         .output
         .pop()
         .ok_or_else(|| "No output.".to_string())
-        .map(|n| n as usize)
+        .map(|n| n as u64)
 }
 
 #[cfg(test)]

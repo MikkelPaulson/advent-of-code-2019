@@ -57,7 +57,7 @@ impl Puzzle {
         }
     }
 
-    pub fn run(&self) -> Result<usize, String> {
+    pub fn run(&self) -> Result<u64, String> {
         let input = self.get_input()?;
 
         match (self.day, self.part) {

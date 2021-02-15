@@ -1,4 +1,4 @@
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut sum = 0;
     for mass in parse(input)? {
         sum += calc_fuel_simple(mass).unwrap();
@@ -6,7 +6,7 @@ pub fn part1(input: &str) -> Result<usize, String> {
     Ok(sum)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let mut sum = 0;
     for mass in parse(input)? {
         sum += calc_fuel(mass);
@@ -14,15 +14,15 @@ pub fn part2(input: &str) -> Result<usize, String> {
     Ok(sum)
 }
 
-fn calc_fuel(mass: usize) -> usize {
+fn calc_fuel(mass: u64) -> u64 {
     calc_fuel_simple(mass).map_or(0, |fuel_mass| fuel_mass + calc_fuel(fuel_mass))
 }
 
-fn calc_fuel_simple(mass: usize) -> Option<usize> {
+fn calc_fuel_simple(mass: u64) -> Option<u64> {
     mass.div_euclid(3).checked_sub(2)
 }
 
-fn parse(input: &str) -> Result<Vec<usize>, String> {
+fn parse(input: &str) -> Result<Vec<u64>, String> {
     input
         .trim()
         .split('\n')

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let map = parse(input);
 
     let mut orbit_count = 0;
@@ -13,7 +13,7 @@ pub fn part1(input: &str) -> Result<usize, String> {
     Ok(orbit_count)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let map = parse(input);
 
     let me = &"YOU".to_string();
@@ -25,7 +25,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
     println!("{:?}", my_orbits);
     println!("{:?}", santa_orbits);
 
-    Ok(my_orbits.symmetric_difference(&santa_orbits).count())
+    Ok(my_orbits.symmetric_difference(&santa_orbits).count() as u64)
 }
 
 type BodyID = String;
@@ -47,7 +47,7 @@ fn get_orbits<'a>(
     my_orbits
 }
 
-fn get_orbit_count(body_id: &BodyID, map: &HashMap<BodyID, OrbitData>) -> usize {
+fn get_orbit_count(body_id: &BodyID, map: &HashMap<BodyID, OrbitData>) -> u64 {
     match map.get(body_id) {
         Some(OrbitData::Body(parent_id)) => {
             let count = get_orbit_count(parent_id, &map) + 1;

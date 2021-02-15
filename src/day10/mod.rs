@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use crate::map::{Coord, Map};
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let map = parse(input);
 
     println!("{}", map);
@@ -13,7 +13,7 @@ pub fn part1(input: &str) -> Result<usize, String> {
     Ok(count_asteroids(&map, &best_coord))
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let map = parse(input);
     let station_coord = find_station(&map).ok_or("No station coordinate found.")?;
 
@@ -49,7 +49,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
             }
 
             if i == 200 {
-                return Ok((asteroid.unwrap().x * 100 + asteroid.unwrap().y) as usize);
+                return Ok((asteroid.unwrap().x * 100 + asteroid.unwrap().y) as u64);
             }
         }
     }
@@ -72,7 +72,7 @@ fn find_station(map: &Map) -> Option<Coord> {
     best_coord
 }
 
-fn count_asteroids(map: &Map, station_coord: &Coord) -> usize {
+fn count_asteroids(map: &Map, station_coord: &Coord) -> u64 {
     let mut count = 0;
     for asteroid_coord in map.points.iter() {
         if asteroid_coord == station_coord {
@@ -100,7 +100,7 @@ fn parse(input: &str) -> Map {
     for (row, line) in input.split('\n').enumerate() {
         for (col, c) in line.chars().enumerate() {
             if c == '#' {
-                asteroids.insert([col, row].into());
+                asteroids.insert([col as i64, row as i64].into());
             }
         }
     }

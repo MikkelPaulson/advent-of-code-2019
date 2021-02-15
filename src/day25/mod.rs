@@ -5,7 +5,7 @@ use std::io;
 use std::io::prelude::*;
 use std::str;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut game = Game::new(input);
     game.loot()?;
 
@@ -45,7 +45,7 @@ impl Game {
 
     pub fn command(&mut self, command: Command) {
         self.intcode.input_str(&String::from(&command)[..]);
-        self.intcode.input.push('\n' as isize);
+        self.intcode.input.push('\n' as i64);
         self.intcode.run();
 
         if let Ok(room) = self.intcode.output_string().parse() {

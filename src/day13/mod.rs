@@ -8,7 +8,7 @@ use std::time::Duration;
 use crate::intcode::{Intcode, Response};
 use crate::map::{Coord, CoordDiff};
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
     intcode.run();
 
@@ -19,14 +19,14 @@ pub fn part1(input: &str) -> Result<usize, String> {
         .tiles
         .values()
         .filter(|tile| tile == &&Tile::Block)
-        .count())
+        .count() as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     part2_speed(input, Duration::from_millis(5))
 }
 
-fn part2_speed(input: &str, speed: Duration) -> Result<usize, String> {
+fn part2_speed(input: &str, speed: Duration) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
     intcode.set(0, 2);
     intcode.run();
@@ -63,31 +63,34 @@ fn part2_speed(input: &str, speed: Duration) -> Result<usize, String> {
     game.update(&intcode.output.split_off(0)[..])?;
     println!("{}", game);
 
-    Ok(game.score as usize)
+    Ok(game.score as u64)
 }
 
 #[derive(Default)]
 struct Game {
     tiles: HashMap<Coord, Tile>,
-    score: isize,
+    score: i64,
     paddle: Option<Coord>,
     ball: Option<Coord>,
     ball_direction: Option<CoordDiff>,
 }
 
 impl Game {
-    fn update(&mut self, input: &[isize]) -> Result<(), String> {
+    fn update(&mut self, input: &[i64]) -> Result<(), String> {
         for chunk in input.chunks_exact(3) {
             self.update_part([chunk[0], chunk[1], chunk[2]])?;
         }
         Ok(())
     }
 
-    fn update_part(&mut self, input: [isize; 3]) -> Result<(), String> {
+    fn update_part(&mut self, input: [i64; 3]) -> Result<(), String> {
         if input[0..=1] == [-1, 0] {
             self.score = input[2];
         } else {
-            let (coord, tile) = ([input[0], input[1]].into(), Tile::try_from(&input[2])?);
+            let (coord, tile) = (
+                [input[0] as i64, input[1] as i64].into(),
+                Tile::try_from(&input[2])?,
+            );
 
             match tile {
                 Tile::Paddle => self.paddle = Some(coord),
@@ -113,10 +116,10 @@ impl Game {
     }
 }
 
-impl TryFrom<&[isize]> for Game {
+impl TryFrom<&[i64]> for Game {
     type Error = String;
 
-    fn try_from(input: &[isize]) -> Result<Self, Self::Error> {
+    fn try_from(input: &[i64]) -> Result<Self, Self::Error> {
         let mut game = Game::default();
         game.update(input)?;
         Ok(game)
@@ -169,10 +172,10 @@ enum Tile {
     Ball,
 }
 
-impl TryFrom<&isize> for Tile {
+impl TryFrom<&i64> for Tile {
     type Error = String;
 
-    fn try_from(input: &isize) -> Result<Self, Self::Error> {
+    fn try_from(input: &i64) -> Result<Self, Self::Error> {
         match input {
             0 => Ok(Self::Empty),
             1 => Ok(Self::Wall),

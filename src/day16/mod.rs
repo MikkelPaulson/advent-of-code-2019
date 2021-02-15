@@ -1,14 +1,14 @@
 use std::mem;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     part1_phases(input, 100)
 }
 
-pub fn part2(_input: &str) -> Result<usize, String> {
+pub fn part2(_input: &str) -> Result<u64, String> {
     Err("Incomplete".to_string())
 }
 
-fn part1_phases(input: &str, phases: u8) -> Result<usize, String> {
+fn part1_phases(input: &str, phases: u8) -> Result<u64, String> {
     let mut digits = parse(input)?;
     let mut temp: Vec<u8> = Vec::with_capacity(digits.len());
 
@@ -23,7 +23,7 @@ fn part1_phases(input: &str, phases: u8) -> Result<usize, String> {
         .iter()
         .take(8)
         .enumerate()
-        .map(|(i, d)| (*d as usize) * 10usize.pow(7 - i as u32))
+        .map(|(i, d)| (*d as u64) * 10u64.pow(7 - i as u32))
         .sum())
 }
 

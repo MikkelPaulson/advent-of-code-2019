@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::str;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let (maze, oxygen_coord) = explore(input.parse()?)?;
 
     println!(
@@ -22,10 +22,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
 
     maze.get_path_len(oxygen_coord, Coord::ORIGIN)
         .ok_or_else(|| format!("No path found from {} to {}", oxygen_coord, Coord::ORIGIN))
-        .map(|i| i as usize)
+        .map(|i| i as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let (maze, oxygen_coord) = explore(input.parse()?)?;
     let (mut explored, mut edges) = (HashSet::new(), HashSet::new());
 
@@ -148,7 +148,7 @@ fn explore(intcode: Intcode) -> Result<(Maze, Coord), String> {
     ))
 }
 
-fn move_droid(droid: &mut Intcode, direction: Direction) -> Option<isize> {
+fn move_droid(droid: &mut Intcode, direction: Direction) -> Option<i64> {
     droid.input.push(match direction {
         Direction::North => 1,
         Direction::East => 4,

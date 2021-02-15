@@ -1,6 +1,6 @@
 use crate::intcode::Intcode;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
     intcode.run();
 
@@ -15,7 +15,7 @@ pub fn part1(input: &str) -> Result<usize, String> {
         .sum())
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
     intcode.set(0, 2);
 
@@ -38,13 +38,13 @@ pub fn part2(input: &str) -> Result<usize, String> {
     let result = intcode
         .output
         .pop()
-        .map(|i| i as usize)
+        .map(|i| i as u64)
         .ok_or_else(|| "No output.".to_string());
     println!("{}", intcode.output_string());
     result
 }
 
-fn get_intersections(map: &str) -> Vec<(usize, usize)> {
+fn get_intersections(map: &str) -> Vec<(u64, u64)> {
     let map_lines = map.trim_end().split('\n').collect::<Vec<&str>>();
     let mut intersections = Vec::new();
 
@@ -56,7 +56,7 @@ fn get_intersections(map: &str) -> Vec<(usize, usize)> {
                 && &map_lines[row + 1][col..col + 1] != "."
                 && &map_lines[row][col..col + 1] != "."
             {
-                intersections.push((row, col));
+                intersections.push((row as u64, col as u64));
             }
         }
     }

@@ -11,11 +11,11 @@ use super::math::lcm;
 const AXIS_COUNT: usize = 3;
 const MOON_COUNT: usize = 4;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     part1_steps(input, 1000)
 }
 
-fn part1_steps(input: &str, steps: usize) -> Result<usize, String> {
+fn part1_steps(input: &str, steps: u64) -> Result<u64, String> {
     let moons = parse(input)?;
 
     for step in 0..steps {
@@ -39,12 +39,12 @@ fn part1_steps(input: &str, steps: usize) -> Result<usize, String> {
     Ok(moons.iter().map(|moon| moon.borrow().total_energy()).sum())
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let moons = parse(input)?;
 
     Ok((0..AXIS_COUNT)
         .map(|i| get_axis_period(&moons, i))
-        .fold(1, |acc, period| lcm(acc as isize, period as isize) as usize))
+        .fold(1, |acc, period| lcm(acc as i64, period as i64) as u64))
 }
 
 fn parse(input: &str) -> Result<[RefCell<Moon>; MOON_COUNT], String> {
@@ -65,8 +65,8 @@ fn parse(input: &str) -> Result<[RefCell<Moon>; MOON_COUNT], String> {
     ])
 }
 
-fn get_axis_period(moons: &[RefCell<Moon>; MOON_COUNT], axis: usize) -> usize {
-    let mut states: HashSet<[[[isize; AXIS_COUNT]; 2]; MOON_COUNT]> = HashSet::new();
+fn get_axis_period(moons: &[RefCell<Moon>; MOON_COUNT], axis: usize) -> u64 {
+    let mut states: HashSet<[[[i64; AXIS_COUNT]; 2]; MOON_COUNT]> = HashSet::new();
 
     loop {
         let mut value = [[[0; AXIS_COUNT]; 2]; MOON_COUNT];
@@ -89,27 +89,27 @@ fn get_axis_period(moons: &[RefCell<Moon>; MOON_COUNT], axis: usize) -> usize {
         }
 
         if !states.insert(value) {
-            return states.len();
+            return states.len() as u64;
         }
     }
 }
 
 struct Moon {
-    position: [isize; AXIS_COUNT],
-    velocity: [isize; AXIS_COUNT],
+    position: [i64; AXIS_COUNT],
+    velocity: [i64; AXIS_COUNT],
 }
 
 impl Moon {
-    fn total_energy(&self) -> usize {
+    fn total_energy(&self) -> u64 {
         self.potential_energy() * self.kinetic_energy()
     }
 
-    fn potential_energy(&self) -> usize {
-        self.position.iter().map(|i| i.abs() as usize).sum()
+    fn potential_energy(&self) -> u64 {
+        self.position.iter().map(|i| i.abs() as u64).sum()
     }
 
-    fn kinetic_energy(&self) -> usize {
-        self.velocity.iter().map(|i| i.abs() as usize).sum()
+    fn kinetic_energy(&self) -> u64 {
+        self.velocity.iter().map(|i| i.abs() as u64).sum()
     }
 
     fn apply_gravity(&mut self, other: &Moon) {

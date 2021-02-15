@@ -3,7 +3,7 @@ use std::iter;
 use std::ops;
 use std::slice;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let image = parse(input, 25, 6);
 
     let min_layer = image
@@ -27,10 +27,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
 
     println!("{} * {}", one_count, two_count);
 
-    Ok(one_count * two_count)
+    Ok((one_count * two_count) as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let image = parse(input, 25, 6);
     let result = image
         .layers
@@ -53,8 +53,8 @@ struct Image {
 }
 
 impl Image {
-    pub fn new(data: &str, width: usize, height: usize) -> Self {
-        let layer_size = width * height;
+    pub fn new(data: &str, width: u64, height: u64) -> Self {
+        let layer_size = (width * height) as usize;
         let mut layers = Vec::with_capacity(data.trim().len() / layer_size);
 
         for start in (0..data.len()).step_by(layer_size) {
@@ -67,12 +67,12 @@ impl Image {
 
 struct Layer {
     data: Vec<u8>,
-    width: usize,
-    height: usize,
+    width: u64,
+    height: u64,
 }
 
 impl Layer {
-    pub fn new(data: &str, width: usize, height: usize) -> Self {
+    pub fn new(data: &str, width: u64, height: u64) -> Self {
         Self {
             data: data
                 .chars()
@@ -83,16 +83,16 @@ impl Layer {
         }
     }
 
-    pub fn empty(width: usize, height: usize) -> Self {
+    pub fn empty(width: u64, height: u64) -> Self {
         Self {
-            data: iter::repeat(2).take(width * height).collect(),
+            data: iter::repeat(2).take((width * height) as usize).collect(),
             width,
             height,
         }
     }
 
     pub fn rows(&self) -> slice::ChunksExact<u8> {
-        self.data.chunks_exact(self.width)
+        self.data.chunks_exact(self.width as usize)
     }
 }
 
@@ -127,7 +127,7 @@ impl ops::Add for &Layer {
     }
 }
 
-fn parse(input: &str, width: usize, height: usize) -> Image {
+fn parse(input: &str, width: u64, height: u64) -> Image {
     Image::new(input.trim(), width, height)
 }
 

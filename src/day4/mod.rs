@@ -1,21 +1,21 @@
 use regex::Regex;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     evaluate(input, Regex::new("00|11|22|33|44|55|66|77|88|99").unwrap())
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     // Worst regex ever, but the Rust crate doesn't support backreferences.
     evaluate(input, Regex::new("([^0]|^)00([^0]|$)|([^1]|^)11([^1]|$)|([^2]|^)22([^2]|$)|([^3]|^)33([^3]|$)|([^4]|^)44([^4]|$)|([^5]|^)55([^5]|$)|([^6]|^)66([^6]|$)|([^7]|^)77([^7]|$)|([^8]|^)88([^8]|$)|([^9]|^)99([^9]|$)").unwrap())
 }
 
-pub fn evaluate(input: &str, pattern: Regex) -> Result<usize, String> {
+pub fn evaluate(input: &str, pattern: Regex) -> Result<u64, String> {
     let [lower, upper] = parse(input);
     println!("{:?}", lower);
     println!("{:?}", upper);
 
-    let lower_val: usize = lower.parse().unwrap();
-    let upper_val: usize = upper.parse().unwrap();
+    let lower_val: u64 = lower.parse().unwrap();
+    let upper_val: u64 = upper.parse().unwrap();
 
     let mut match_count = 0;
     let mut test_count = 0;
@@ -32,7 +32,7 @@ pub fn evaluate(input: &str, pattern: Regex) -> Result<usize, String> {
                                 continue;
                             }
 
-                            match test_string.parse::<usize>() {
+                            match test_string.parse::<u64>() {
                                 Ok(i) if i < lower_val => continue,
                                 Ok(i) if i > upper_val => {
                                     println!("Tests: {:?}", test_count);

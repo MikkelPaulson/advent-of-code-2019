@@ -4,7 +4,7 @@ use crate::map::{Coord, Map};
 use std::default;
 use std::fmt;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
     let mut ship = Ship::default();
 
@@ -14,10 +14,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
 
     println!("{}", ship.painted_panels);
 
-    Ok(ship.painted_panels.points.len())
+    Ok(ship.painted_panels.points.len() as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
     let mut ship = Ship::default();
 

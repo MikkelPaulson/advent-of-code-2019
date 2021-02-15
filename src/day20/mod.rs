@@ -1,9 +1,9 @@
-use std::collections::{BTreeSet, BinaryHeap, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use super::map::{Coord, Direction};
 use super::maze::{Maze, Tile};
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let (maze, start_coord, end_coord) = parse(input)?;
 
     println!(
@@ -18,16 +18,16 @@ pub fn part1(input: &str) -> Result<usize, String> {
     );
 
     maze.get_path_len(start_coord, end_coord)
-        .map(|i| i as usize)
+        .map(|i| i as u64)
         .ok_or_else(|| format!("No path found from {} to {}.", start_coord, end_coord))
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let (maze, start_coord, end_coord) = parse(input)?;
 
     let (inner_portals, outer_portals) = {
         let mut portals: HashSet<Coord> = HashSet::new();
-        let mut edges: HashMap<Direction, BTreeSet<isize>> = HashMap::new();
+        let mut edges: HashMap<Direction, BTreeSet<i64>> = HashMap::new();
 
         maze.iter().for_each(|(&coord, &tile)| {
             if let Tile::Portal { direction, .. } = tile {
@@ -86,7 +86,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
     );
 
     maze.get_path_len(start_coord, end_coord)
-        .map(|i| i as usize)
+        .map(|i| i as u64)
         .ok_or_else(|| format!("No path found from {} to {}.", start_coord, end_coord))
 }
 
@@ -101,7 +101,7 @@ fn parse(input: &str) -> Result<(Maze, Coord, Coord), String> {
 
     for (y, line) in input_lines.iter().enumerate() {
         for (x, c) in line.chars().enumerate() {
-            let coord = [x, y].into();
+            let coord = [x as i64, y as i64].into();
 
             if c == '.' {
                 maze.entry(coord).or_insert(Tile::Floor);

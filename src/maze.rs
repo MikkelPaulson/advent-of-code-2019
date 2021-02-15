@@ -8,7 +8,7 @@ use crate::map::{Coord, CoordMap, Direction};
 pub struct Maze(HashMap<Coord, Tile>);
 
 impl Maze {
-    pub fn get_path_len(&self, origin: Coord, destination: Coord) -> Option<u32> {
+    pub fn get_path_len(&self, origin: Coord, destination: Coord) -> Option<u64> {
         self.get_path_len_with_overlay(origin, destination, &HashMap::new())
     }
 
@@ -17,7 +17,7 @@ impl Maze {
         origin: Coord,
         destination: Coord,
         tiles: &HashMap<Coord, Tile>,
-    ) -> Option<u32> {
+    ) -> Option<u64> {
         let (mut explored, mut edges) = (HashSet::new(), HashSet::new());
 
         explored.insert(origin);

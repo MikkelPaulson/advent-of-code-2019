@@ -1,17 +1,17 @@
 use std::collections;
 use std::str;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let lines = parse(input);
     let intersections = lines[0].plot_intersections(&lines[1]);
 
     if intersections.is_empty() {
         Err("No intersections found!".to_string())
     } else {
-        let mut min_distance = usize::MAX;
+        let mut min_distance = u64::MAX;
 
         for (x, y, _) in intersections {
-            let distance = (x.abs() + y.abs()) as usize;
+            let distance = (x.abs() + y.abs()) as u64;
             if distance > 0 && distance < min_distance {
                 min_distance = distance;
             }
@@ -21,7 +21,7 @@ pub fn part1(input: &str) -> Result<usize, String> {
     }
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let lines = parse(input);
     let intersections = lines[0].plot_intersections(&lines[1]);
 
@@ -44,13 +44,13 @@ fn parse(input: &str) -> [Line; 2] {
 
 #[derive(Debug)]
 struct Segment {
-    start: isize,
-    end: isize,
-    distance: usize,
+    start: i64,
+    end: i64,
+    distance: u64,
 }
 
 impl Segment {
-    pub fn new(start: isize, end: isize, distance: usize) -> Self {
+    pub fn new(start: i64, end: i64, distance: u64) -> Self {
         Self {
             start,
             end,
@@ -61,12 +61,12 @@ impl Segment {
 
 #[derive(Debug)]
 struct Line {
-    vertical_segments: collections::HashMap<isize, Vec<Segment>>,
-    horizontal_segments: collections::HashMap<isize, Vec<Segment>>,
+    vertical_segments: collections::HashMap<i64, Vec<Segment>>,
+    horizontal_segments: collections::HashMap<i64, Vec<Segment>>,
 }
 
 impl Line {
-    fn plot_intersections(&self, other: &Line) -> Vec<(isize, isize, usize)> {
+    fn plot_intersections(&self, other: &Line) -> Vec<(i64, i64, u64)> {
         let mut overlaps = Vec::new();
         println!("{:?}", self);
         println!("{:?}", other);
@@ -79,7 +79,7 @@ impl Line {
                 for my_segment in my_segment_set {
                     for i in 0..=(my_segment.end - my_segment.start).abs() {
                         let b = my_segment.start + i * (my_segment.end - my_segment.start).signum();
-                        if *a != 0isize || b != 0isize {
+                        if *a != 0i64 || b != 0i64 {
                             if let Some(your_segment_set) = your_segments.get(&b) {
                                 for your_segment in your_segment_set {
                                     if (your_segment.start..=your_segment.end).contains(&a)
@@ -96,17 +96,17 @@ impl Line {
                                             your_segment.end,
                                             your_segment.distance,
                                             my_segment.distance
-                                                + (b - my_segment.start).abs() as usize
+                                                + (b - my_segment.start).abs() as u64
                                                 + your_segment.distance
-                                                + (a - your_segment.start).abs() as usize,
+                                                + (a - your_segment.start).abs() as u64,
                                         );
                                         overlaps.push((
                                             a.clone(),
                                             b.clone(),
                                             my_segment.distance
-                                                + (b - my_segment.start).abs() as usize
+                                                + (b - my_segment.start).abs() as u64
                                                 + your_segment.distance
-                                                + (a - your_segment.start).abs() as usize,
+                                                + (a - your_segment.start).abs() as u64,
                                         ));
                                     }
                                 }
@@ -176,7 +176,7 @@ impl str::FromStr for Line {
                 _ => return Err("Invalid direction."),
             }
 
-            total_distance += *distance as usize;
+            total_distance += *distance as u64;
         }
 
         Ok(Self {

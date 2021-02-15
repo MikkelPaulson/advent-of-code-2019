@@ -2,15 +2,15 @@ use std::str;
 
 #[derive(Clone, Debug)]
 pub struct Intcode {
-    pub data: Vec<isize>,
-    pub input: Vec<isize>,
-    pub output: Vec<isize>,
+    pub data: Vec<i64>,
+    pub input: Vec<i64>,
+    pub output: Vec<i64>,
     cursor: usize,
-    relative_base: isize,
+    relative_base: i64,
 }
 
 impl Intcode {
-    pub fn new(data: Vec<isize>) -> Self {
+    pub fn new(data: Vec<i64>) -> Self {
         Self {
             data,
             input: Vec::new(),
@@ -20,28 +20,28 @@ impl Intcode {
         }
     }
 
-    pub fn with_input(mut self, data: &[isize]) -> Self {
+    pub fn with_input(mut self, data: &[i64]) -> Self {
         data.iter().for_each(|i| self.input.push(*i));
         self
     }
 
     pub fn input_str(&mut self, data: &str) {
         self.input.reserve(data.len());
-        data.chars().for_each(|c| self.input.push(c as isize));
+        data.chars().for_each(|c| self.input.push(c as i64));
     }
 
     pub fn output_string(&self) -> String {
         self.output.iter().map(|c| (*c as u8) as char).collect()
     }
 
-    pub fn set(&mut self, offset: usize, value: isize) {
+    pub fn set(&mut self, offset: usize, value: i64) {
         if offset >= self.data.len() {
             self.data.resize(offset + 1, 0);
         }
         self.data[offset] = value;
     }
 
-    pub fn get(&self, offset: usize) -> isize {
+    pub fn get(&self, offset: usize) -> i64 {
         self.data.get(offset).map_or(0, |v| *v)
     }
 
@@ -184,10 +184,10 @@ impl Intcode {
         Some(Response::Terminated)
     }
 
-    fn get_param(&self, param_index: usize) -> isize {
+    fn get_param(&self, param_index: usize) -> i64 {
         let param = self.get(self.cursor + param_index + 1);
 
-        match Self::get_mode(self.get(self.cursor) as usize, param_index) {
+        match Self::get_mode(self.get(self.cursor), param_index) {
             // Position mode - interpret as pointer.
             InstructionMode::Position => self.get(param as usize),
 
@@ -199,8 +199,8 @@ impl Intcode {
         }
     }
 
-    fn set_pos(&mut self, param_index: usize, value: isize) {
-        let pos = match Self::get_mode(self.get(self.cursor) as usize, param_index) {
+    fn set_pos(&mut self, param_index: usize, value: i64) {
+        let pos = match Self::get_mode(self.get(self.cursor), param_index) {
             // Position mode - interpret as pointer.
             InstructionMode::Position => self.get(self.cursor + param_index + 1) as usize,
 
@@ -218,8 +218,8 @@ impl Intcode {
         self.set(pos, value);
     }
 
-    fn get_mode(instruction: usize, param_index: usize) -> InstructionMode {
-        InstructionMode::from(instruction as u32 / 10u32.pow(param_index as u32 + 2) % 10)
+    fn get_mode(instruction: i64, param_index: usize) -> InstructionMode {
+        InstructionMode::from(instruction / 10i64.pow(param_index as u32 + 2) % 10)
     }
 }
 
@@ -248,8 +248,8 @@ enum InstructionMode {
     Relative,
 }
 
-impl From<u32> for InstructionMode {
-    fn from(value: u32) -> Self {
+impl From<i64> for InstructionMode {
+    fn from(value: i64) -> Self {
         match value {
             0 => InstructionMode::Position,
             1 => InstructionMode::Immediate,

@@ -1,12 +1,12 @@
 use crate::intcode::Intcode;
 use crate::map::Coord;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let intcode: Intcode = input.parse()?;
     let mut affected_points = 0;
 
-    for y in 0..50isize {
-        for x in 0..50isize {
+    for y in 0..50i64 {
+        for x in 0..50i64 {
             if is_hit(&intcode, [x, y])? {
                 print!("#");
                 affected_points += 1;
@@ -20,11 +20,11 @@ pub fn part1(input: &str) -> Result<usize, String> {
     Ok(affected_points)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let intcode = input.parse()?;
 
-    let mut y = 6isize;
-    let mut x = 0isize;
+    let mut y = 6i64;
+    let mut x = 0i64;
 
     loop {
         print!("{}, {}: ", x, y);
@@ -45,7 +45,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
         }
     }
 
-    Ok((x * 10000 + y) as usize)
+    Ok((x * 10000 + y) as u64)
 }
 
 pub fn is_hit(intcode: &Intcode, coord: impl Into<Coord>) -> Result<bool, String> {

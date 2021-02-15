@@ -1,6 +1,6 @@
 use crate::intcode::Intcode;
 
-pub fn part1(input: &str) -> Result<usize, String> {
+pub fn part1(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
 
     intcode.set(1, 12);
@@ -8,10 +8,10 @@ pub fn part1(input: &str) -> Result<usize, String> {
 
     intcode.run();
 
-    Ok(intcode.get(0) as usize)
+    Ok(intcode.get(0) as u64)
 }
 
-pub fn part2(input: &str) -> Result<usize, String> {
+pub fn part2(input: &str) -> Result<u64, String> {
     let clean_intcode: Intcode = input.parse()?;
 
     for noun in 0..100 {
@@ -24,7 +24,7 @@ pub fn part2(input: &str) -> Result<usize, String> {
             intcode.run();
 
             if intcode.get(0) == 19690720 {
-                return Ok((100 * noun + verb) as usize);
+                return Ok((100 * noun + verb) as u64);
             }
         }
     }
