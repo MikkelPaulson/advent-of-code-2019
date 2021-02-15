@@ -78,6 +78,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn part2_examples() {
         assert_eq!(Ok(84462026), part2("03036732577212944063491565474664"));
         assert_eq!(Ok(78725270), part2("02935109699940807407585447034323"));
