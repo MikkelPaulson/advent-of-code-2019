@@ -1,47 +1,65 @@
-use std::mem;
+use std::collections::HashMap;
+use std::ops::Range;
 
 pub fn part1(input: &str) -> Result<u64, String> {
-    part1_phases(input, 100)
+    let mut cache = HashMap::new();
+    get_digits(&mut cache, &parse(input)?, 1, 100, 0..8)
 }
 
-pub fn part2(_input: &str) -> Result<u64, String> {
-    Err("Incomplete".to_string())
+pub fn part2(input: &str) -> Result<u64, String> {
+    let digits = parse(input)?;
+    let mut cache = HashMap::new();
+
+    let offset = get_digits(&mut cache, &digits, 10000, 100, 0..8)? as usize;
+    println!("Calculating offset {}", offset);
+
+    get_digits(&mut cache, &digits, 10000, 100, offset..offset + 8)
 }
 
-fn part1_phases(input: &str, phases: u8) -> Result<u64, String> {
-    let mut digits = parse(input)?;
-    let mut temp: Vec<u8> = Vec::with_capacity(digits.len());
+fn get_digits(
+    cache: &mut HashMap<(usize, usize), u8>,
+    digits: &Vec<u8>,
+    repetitions: usize,
+    cycles: usize,
+    range: Range<usize>,
+) -> Result<u64, String> {
+    let range_end = range.end;
 
-    for _ in 0..phases {
-        (0..digits.len()).for_each(|i| temp.push(get_digit(&digits, i)));
-
-        mem::swap(&mut digits, &mut temp);
-        temp.clear();
-    }
-
-    Ok(digits
-        .iter()
-        .take(8)
-        .enumerate()
-        .map(|(i, d)| (*d as u64) * 10u64.pow(7 - i as u32))
+    Ok(range
+        .map(|i| {
+            get_digit(cache, digits, repetitions, cycles, i) as u64
+                * 10u64.pow((range_end - i - 1) as u32)
+        })
         .sum())
 }
 
-fn get_digit(digits: &Vec<u8>, position: usize) -> u8 {
-    let mut iter = digits.iter();
-    let mut result: i64 = 0;
+fn get_digit(
+    cache: &mut HashMap<(usize, usize), u8>,
+    digits: &Vec<u8>,
+    repetitions: usize,
+    cycle: usize,
+    position: usize,
+) -> u8 {
+    if position > digits.len() * repetitions {
+        0
+    } else if cycle == 0 {
+        digits.get(position % digits.len()).copied().unwrap()
+    } else if let Some(i) = cache.get(&(cycle - 1, position)) {
+        *i
+    } else {
+        let plus: i64 = (0..(digits.len() * repetitions))
+            .filter(|i| (i + 1) / (position + 1) % 4 == 1)
+            .map(|i| get_digit(cache, digits, repetitions, cycle - 1, i) as i64)
+            .sum();
+        let minus: i64 = (0..(digits.len() * repetitions))
+            .filter(|i| (i + 1) / (position + 1) % 4 == 3)
+            .map(|i| get_digit(cache, digits, repetitions, cycle - 1, i) as i64)
+            .sum();
 
-    for _ in 0..(digits.len() / (position + 1) * 4) {
-        result += *iter.nth(position).unwrap_or(&0) as i64;
-        (0..position).for_each(|_| result += *iter.next().unwrap_or(&0) as i64);
-
-        result -= *iter.nth(position + 1).unwrap_or(&0) as i64;
-        (0..position).for_each(|_| result -= *iter.next().unwrap_or(&0) as i64);
-
-        iter.next();
+        let result = ((plus as i64 - minus as i64) % 10).abs() as u8;
+        cache.insert((cycle - 1, position), result);
+        result
     }
-
-    (result % 10).abs() as u8
 }
 
 fn parse(input: &str) -> Result<Vec<u8>, String> {
