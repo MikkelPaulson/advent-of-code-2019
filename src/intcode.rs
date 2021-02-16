@@ -7,6 +7,7 @@ pub struct Intcode {
     pub output: Vec<i64>,
     cursor: usize,
     relative_base: i64,
+    pub steps: u64,
 }
 
 impl Intcode {
@@ -17,6 +18,7 @@ impl Intcode {
             output: Vec::new(),
             cursor: 0,
             relative_base: 0,
+            steps: 0,
         }
     }
 
@@ -54,6 +56,7 @@ impl Intcode {
     }
 
     pub fn step(&mut self) -> Option<Response> {
+        self.steps += 1;
         let opcode = self.get(self.cursor) % 100;
 
         match opcode {
