@@ -47,16 +47,15 @@ fn get_digit(
     } else if let Some(i) = cache.get(&(cycle - 1, position)) {
         *i
     } else {
-        let plus: i64 = (0..(digits.len() * repetitions))
-            .filter(|i| (i + 1) / (position + 1) % 4 == 1)
-            .map(|i| get_digit(cache, digits, repetitions, cycle - 1, i) as i64)
-            .sum();
-        let minus: i64 = (0..(digits.len() * repetitions))
-            .filter(|i| (i + 1) / (position + 1) % 4 == 3)
-            .map(|i| get_digit(cache, digits, repetitions, cycle - 1, i) as i64)
-            .sum();
+        let result = ((0..(digits.len() * repetitions)).fold(0i64, |acc, i| {
+            match (i + 1) / (position + 1) % 4 {
+                1 => acc + get_digit(cache, digits, repetitions, cycle - 1, i) as i64,
+                3 => acc - get_digit(cache, digits, repetitions, cycle - 1, i) as i64,
+                _ => acc,
+            }
+        }) % 10)
+            .abs() as u8;
 
-        let result = ((plus as i64 - minus as i64) % 10).abs() as u8;
         cache.insert((cycle - 1, position), result);
         result
     }
@@ -76,14 +75,21 @@ fn parse(input: &str) -> Result<Vec<u8>, String> {
 
 #[cfg(test)]
 mod test {
-    use super::{part1, part1_phases, part2};
+    use super::{get_digits, part1, part2, HashMap};
 
     #[test]
     fn part1_examples() {
-        assert_eq!(Ok(48226158), part1_phases("12345678", 1));
-        assert_eq!(Ok(34040438), part1_phases("12345678", 2));
-        assert_eq!(Ok(03415518), part1_phases("12345678", 3));
-        assert_eq!(Ok(01029498), part1_phases("12345678", 4));
+        let digits = vec![1, 2, 3, 4, 5, 6, 7, 8];
+
+        let mut cache = HashMap::new();
+        assert_eq!(Ok(48226158), get_digits(&mut cache, &digits, 1, 1, 0..8));
+        cache.clear();
+        assert_eq!(Ok(34040438), get_digits(&mut cache, &digits, 1, 2, 0..8));
+        cache.clear();
+        assert_eq!(Ok(03415518), get_digits(&mut cache, &digits, 1, 3, 0..8));
+        cache.clear();
+        assert_eq!(Ok(01029498), get_digits(&mut cache, &digits, 1, 4, 0..8));
+
         assert_eq!(Ok(24176176), part1("80871224585914546619083218645595"));
         assert_eq!(Ok(73745418), part1("19617804207202209144916044189917"));
         assert_eq!(Ok(52432133), part1("69317163492948606335995924319873"));
