@@ -17,12 +17,18 @@ pub fn part2(input: &str) -> Result<u64, String> {
 }
 
 fn get_digits(
-    cache: &mut HashMap<(usize, usize), u8>,
-    digits: &Vec<u8>,
+    cache: &mut HashMap<(usize, usize), i16>,
+    digits: &Vec<i16>,
     repetitions: usize,
     cycles: usize,
     range: Range<usize>,
 ) -> Result<u64, String> {
+    cache.reserve(
+        (digits.len() * repetitions * cycles)
+            .checked_sub(cache.capacity())
+            .unwrap_or_default(),
+    );
+
     let range_end = range.end;
 
     Ok(range
@@ -34,12 +40,12 @@ fn get_digits(
 }
 
 fn get_digit(
-    cache: &mut HashMap<(usize, usize), u8>,
-    digits: &Vec<u8>,
+    cache: &mut HashMap<(usize, usize), i16>,
+    digits: &Vec<i16>,
     repetitions: usize,
     cycle: usize,
     position: usize,
-) -> u8 {
+) -> i16 {
     if position > digits.len() * repetitions {
         0
     } else if cycle == 0 {
@@ -47,27 +53,27 @@ fn get_digit(
     } else if let Some(i) = cache.get(&(cycle - 1, position)) {
         *i
     } else {
-        let result = ((0..(digits.len() * repetitions)).fold(0i64, |acc, i| {
+        let result = ((0..(digits.len() * repetitions)).fold(0i16, |acc, i| {
             match (i + 1) / (position + 1) % 4 {
-                1 => acc + get_digit(cache, digits, repetitions, cycle - 1, i) as i64,
-                3 => acc - get_digit(cache, digits, repetitions, cycle - 1, i) as i64,
+                1 => acc + get_digit(cache, digits, repetitions, cycle - 1, i),
+                3 => acc - get_digit(cache, digits, repetitions, cycle - 1, i),
                 _ => acc,
             }
         }) % 10)
-            .abs() as u8;
+            .abs();
 
         cache.insert((cycle - 1, position), result);
         result
     }
 }
 
-fn parse(input: &str) -> Result<Vec<u8>, String> {
+fn parse(input: &str) -> Result<Vec<i16>, String> {
     input
         .trim()
         .chars()
         .map(|c| {
             c.to_digit(10)
-                .map(|c| c as u8)
+                .map(|c| c as i16)
                 .ok_or_else(|| format!("Invalid digit: {}", c))
         })
         .collect::<Result<_, _>>()
