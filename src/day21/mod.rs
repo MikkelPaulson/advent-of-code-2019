@@ -4,14 +4,16 @@ pub fn part1(input: &str) -> Result<u64, String> {
     let mut intcode: Intcode = input.parse()?;
 
     intcode.input_str(
-        "NOT A J
+        "
+NOT A J
 NOT B T
 OR T J
 NOT C T
 OR T J
 AND D J
 WALK
-",
+"
+        .trim_start(),
     );
 
     intcode.run();
@@ -40,14 +42,22 @@ pub fn part2(input: &str) -> Result<u64, String> {
     // Or the round after that? (C is a hole or G is a hole)
 
     intcode.input_str(
-        "NOT A J
+        "
+NOT A J
 NOT B T
 OR T J
 NOT C T
 OR T J
 AND D J
+AND I T
+AND E T
+OR H T
+AND T J
+NOT A T
+OR T J
 RUN
-",
+"
+        .trim_start(),
     );
 
     intcode.run();
@@ -70,8 +80,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn part2_solution() {
-        assert_eq!(Ok(0), part2(include_str!("input.txt")));
+        assert_eq!(Ok(1140850168), part2(include_str!("input.txt")));
     }
 }
