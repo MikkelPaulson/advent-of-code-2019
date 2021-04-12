@@ -1,70 +1,67 @@
 use std::collections::HashMap;
+use std::mem;
 use std::ops::Range;
 
 pub fn part1(input: &str) -> Result<u64, String> {
-    let mut cache = HashMap::new();
-    get_digits(&mut cache, &parse(input)?, 1, 100, 0..8)
+    let output = cycles(&parse(input)?, 1, 100);
+    Ok(slice_digits(&output, 0..8))
 }
 
 pub fn part2(input: &str) -> Result<u64, String> {
-    let digits = parse(input)?;
-    let mut cache = HashMap::new();
-
-    let offset = get_digits(&mut cache, &digits, 10000, 100, 0..8)? as usize;
-    println!("Calculating offset {}", offset);
-
-    get_digits(&mut cache, &digits, 10000, 100, offset..offset + 8)
+    Err("Not implemented".to_string())
 }
 
-fn get_digits(
-    cache: &mut HashMap<(usize, usize), i16>,
-    digits: &Vec<i16>,
-    repetitions: usize,
-    cycles: usize,
-    range: Range<usize>,
-) -> Result<u64, String> {
-    cache.reserve(
-        (digits.len() * repetitions * cycles)
-            .checked_sub(cache.capacity())
-            .unwrap_or_default(),
-    );
-
+fn slice_digits(digits: &Vec<i16>, range: Range<usize>) -> u64 {
     let range_end = range.end;
 
-    Ok(range
-        .map(|i| {
-            get_digit(cache, digits, repetitions, cycles, i) as u64
-                * 10u64.pow((range_end - i - 1) as u32)
-        })
-        .sum())
+    range
+        .map(|i| digits[i] as u64 * 10u64.pow((range_end - i - 1) as u32))
+        .sum()
 }
 
-fn get_digit(
-    cache: &mut HashMap<(usize, usize), i16>,
-    digits: &Vec<i16>,
-    repetitions: usize,
-    cycle: usize,
-    position: usize,
-) -> i16 {
-    if position > digits.len() * repetitions {
-        0
-    } else if cycle == 0 {
-        digits.get(position % digits.len()).copied().unwrap()
-    } else if let Some(i) = cache.get(&(cycle - 1, position)) {
-        *i
-    } else {
-        let result = ((0..(digits.len() * repetitions)).fold(0i16, |acc, i| {
-            match (i + 1) / (position + 1) % 4 {
-                1 => acc + get_digit(cache, digits, repetitions, cycle - 1, i),
-                3 => acc - get_digit(cache, digits, repetitions, cycle - 1, i),
-                _ => acc,
-            }
-        }) % 10)
-            .abs();
+fn cycles(input: &Vec<i16>, repetitions: usize, cycles: usize) -> Vec<i16> {
+    let mut digits = (0..repetitions)
+        .flat_map(|_| input.iter())
+        .copied()
+        .collect();
 
-        cache.insert((cycle - 1, position), result);
-        result
+    for i in 0..cycles {
+        cycle(&mut digits);
+        println!("Cycle {}: {:?}", i, digits);
     }
+
+    digits
+}
+
+fn cycle(input: &mut Vec<i16>) {
+    let result = (0..input.len()).map(|i| digit(&input, i)).collect();
+    mem::replace(input, result);
+}
+
+fn digit(input: &[i16], calc_pos: usize) -> i16 {
+    let mut acc: i16 = 0;
+    let mut i = 0;
+    let repetitions = calc_pos + 1;
+    let half_step = repetitions * 2;
+    let step = repetitions * 4;
+
+    while i + calc_pos < input.len() {
+        let mut start = i + calc_pos;
+        let mut end = (start + calc_pos).min(input.len() - 1);
+        let sum: i16 = input[start..=end].iter().sum();
+        acc = acc + sum;
+
+        start += half_step;
+        if start < input.len() {
+            end = (end + half_step).min(input.len() - 1);
+            let sum: i16 = input[start..=end].iter().sum();
+            acc -= sum;
+        }
+
+        i += step;
+    }
+
+    acc.abs() % 10
 }
 
 fn parse(input: &str) -> Result<Vec<i16>, String> {
@@ -81,20 +78,16 @@ fn parse(input: &str) -> Result<Vec<i16>, String> {
 
 #[cfg(test)]
 mod test {
-    use super::{get_digits, part1, part2, HashMap};
+    use super::{cycles, part1, part2, slice_digits};
 
     #[test]
     fn part1_examples() {
         let digits = vec![1, 2, 3, 4, 5, 6, 7, 8];
 
-        let mut cache = HashMap::new();
-        assert_eq!(Ok(48226158), get_digits(&mut cache, &digits, 1, 1, 0..8));
-        cache.clear();
-        assert_eq!(Ok(34040438), get_digits(&mut cache, &digits, 1, 2, 0..8));
-        cache.clear();
-        assert_eq!(Ok(03415518), get_digits(&mut cache, &digits, 1, 3, 0..8));
-        cache.clear();
-        assert_eq!(Ok(01029498), get_digits(&mut cache, &digits, 1, 4, 0..8));
+        assert_eq!(48226158, slice_digits(&cycles(&digits, 1, 1), 0..8));
+        assert_eq!(34040438, slice_digits(&cycles(&digits, 1, 2), 0..8));
+        assert_eq!(03415518, slice_digits(&cycles(&digits, 1, 3), 0..8));
+        assert_eq!(01029498, slice_digits(&cycles(&digits, 1, 4), 0..8));
 
         assert_eq!(Ok(24176176), part1("80871224585914546619083218645595"));
         assert_eq!(Ok(73745418), part1("19617804207202209144916044189917"));
