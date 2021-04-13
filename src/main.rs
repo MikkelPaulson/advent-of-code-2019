@@ -18,6 +18,7 @@ mod day19;
 mod day2;
 mod day20;
 mod day21;
+mod day22;
 mod day23;
 mod day25;
 mod day3;
@@ -105,6 +106,7 @@ impl Puzzle {
             (20, 2) => day20::part2(&input),
             (21, 1) => day21::part1(&input),
             (21, 2) => day21::part2(&input),
+            (22, 1) => day22::part1(&input),
             (23, 1) => day23::part1(&input),
             (23, 2) => day23::part2(&input),
             (25, 1) => day25::part1(&input),
