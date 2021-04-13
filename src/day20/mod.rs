@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::mem;
 
 use super::map::{Coord, Direction};
 use super::maze::{Maze, Tile};
@@ -71,23 +72,89 @@ pub fn part2(input: &str) -> Result<u64, String> {
         (inner_portals, outer_portals)
     };
 
-    println!("{:?}", inner_portals);
-    println!("{:?}", outer_portals);
+    let mut mazes = {
+        let mut mazes: Vec<(HashSet<Coord>, HashSet<Coord>)> = Vec::new();
+        let (mut explored, mut edges) = (HashSet::new(), HashSet::new());
 
-    println!(
-        "{}",
-        maze.display_with_overlay(|c| if inner_portals.contains(c) {
-            Some('I')
-        } else if outer_portals.contains(c) {
-            Some('O')
-        } else {
-            None
-        })
-    );
+        explored.insert(start_coord);
+        edges.insert(start_coord);
 
-    maze.get_path_len(start_coord, end_coord)
-        .map(|i| i as u64)
-        .ok_or_else(|| format!("No path found from {} to {}.", start_coord, end_coord))
+        mazes.push((explored, edges));
+        mazes
+    };
+
+    let overlay: HashMap<Coord, Tile> = inner_portals
+        .iter()
+        .chain(outer_portals.iter())
+        .map(|&coord| (coord, Tile::Floor))
+        .collect();
+    let overlay_outer: HashMap<Coord, Tile> = inner_portals
+        .iter()
+        .map(|&coord| (coord, Tile::Floor))
+        .chain(outer_portals.iter().map(|&coord| (coord, Tile::Wall)))
+        .collect();
+
+    let (mut portal_edges, mut portal_edges_next): (Vec<(usize, Coord)>, Vec<(usize, Coord)>) =
+        (Vec::new(), Vec::new());
+    let mut step = 0;
+
+    loop {
+        if mazes
+            .first()
+            .map_or(false, |(_, edges)| edges.contains(&end_coord))
+        {
+            return Ok(step);
+        }
+
+        if mazes.last().map_or(true, |(_, edges)| !edges.is_empty()) {
+            mazes.push((HashSet::new(), HashSet::new()));
+        }
+
+        let mut no_edges = true;
+
+        for i in 0..mazes.len() - 1 {
+            let (explored, edges) = &mut mazes[i];
+
+            if no_edges && !edges.is_empty() {
+                no_edges = false;
+            }
+
+            maze.explore_step_with_overlay(
+                explored,
+                edges,
+                if i == 0 { &overlay_outer } else { &overlay },
+            );
+
+            inner_portals.intersection(edges).for_each(|&coord| {
+                println!("Inner portal detected at {}, level {}", coord, i);
+                portal_edges_next.push((i + 1, coord));
+            });
+
+            outer_portals.intersection(edges).for_each(|&coord| {
+                println!("Outer portal detected at {}, level {}", coord, i);
+                portal_edges_next.push((i - 1, coord));
+            });
+        }
+
+        if no_edges {
+            return Err(format!(
+                "No path found from {} to {} after {} steps.",
+                start_coord, end_coord, step
+            ));
+        }
+
+        portal_edges.drain(..).for_each(|(i, origin_coord)| {
+            if let Some(Tile::Portal { coord, .. }) = maze.get(&origin_coord) {
+                println!("Jumping to level {} at {} (step {})", i, coord, step);
+                mazes[i].0.insert(*coord);
+                mazes[i].1.insert(*coord);
+            }
+        });
+
+        mem::swap(&mut portal_edges, &mut portal_edges_next);
+
+        step += 1;
+    }
 }
 
 fn parse(input: &str) -> Result<(Maze, Coord, Coord), String> {
@@ -199,10 +266,8 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn part2_examples() {
-        assert_eq!(Ok(0), part2(include_str!("test1.txt")));
-        assert_eq!(Err("".to_string()), part2(include_str!("test2.txt")));
+        assert_eq!(Ok(26), part2(include_str!("test1.txt")));
         assert_eq!(Ok(396), part2(include_str!("test3.txt")));
     }
 
