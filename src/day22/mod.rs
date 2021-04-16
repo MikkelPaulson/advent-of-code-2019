@@ -1,17 +1,22 @@
+use std::collections::HashSet;
 use std::mem;
 use std::str::FromStr;
 
 pub fn part1(input: &str) -> Result<u64, String> {
-    let cards = evaluate_with_deck_size(&parse(input)?, 10007);
+    let cards = deal_with_deck_size(&parse(input)?, 10007);
 
     cards
         .iter()
         .enumerate()
         .find_map(|(i, &card)| if card == 2019 { Some(i as u64) } else { None })
-        .ok_or_else(|| "No card at index 2019.".to_string())
+        .ok_or_else(|| "No card found with value 2019.".to_string())
 }
 
-fn evaluate_with_deck_size(instructions: &Vec<Instruction>, deck_size: u16) -> Vec<u16> {
+pub fn part2(input: &str) -> Result<u64, String> {
+    card_at(&parse(input)?, 2020, 119315717514047, 101741582076661)
+}
+
+fn deal_with_deck_size(instructions: &[Instruction<usize>], deck_size: u16) -> Vec<u16> {
     let mut deck = Deck::new(deck_size);
 
     instructions
@@ -19,6 +24,65 @@ fn evaluate_with_deck_size(instructions: &Vec<Instruction>, deck_size: u16) -> V
         .for_each(|instruction| deck.evaluate(instruction));
 
     deck.cards
+}
+
+fn card_at(
+    instructions: &[Instruction<u64>],
+    position: u64,
+    deck_size: u64,
+    shuffles: u64,
+) -> Result<u64, String> {
+    let mut past_values = HashSet::new();
+
+    if position < deck_size {
+        Ok((0..shuffles).fold(position, |position, i| {
+            let result = instructions.iter().fold(position, |acc, instruction| {
+                transform(instruction, acc, deck_size)
+            });
+
+            if !past_values.insert(result) {
+                println!("{} of {}: {}", i, shuffles, result);
+            }
+            result
+        }))
+    } else {
+        Err(format!("No card at position {}", position))
+    }
+}
+
+fn transform(instruction: &Instruction<u64>, position: u64, deck_size: u64) -> u64 {
+    match instruction {
+        Instruction::CutLeft(i) => {
+            if position >= deck_size - i {
+                position - (deck_size - i)
+            } else {
+                position + i
+            }
+        }
+        Instruction::CutRight(i) => {
+            if &position < i {
+                deck_size - i + position
+            } else {
+                position - i
+            }
+        }
+        Instruction::DealWithIncrement(increment) => {
+            if position == 0 {
+                0
+            } else {
+                (0..*increment)
+                    .find_map(|i| {
+                        if (deck_size * i + position) % increment == 0 {
+                            Some((deck_size * i + position) / increment)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap()
+            }
+        }
+        Instruction::DealIntoNewStack => deck_size - position - 1,
+    }
 }
 
 struct Deck {
@@ -34,7 +98,7 @@ impl Deck {
         Self { cards }
     }
 
-    pub fn evaluate(&mut self, instruction: &Instruction) {
+    pub fn evaluate(&mut self, instruction: &Instruction<usize>) {
         println!("Evaluating instruction: {:?}", instruction);
 
         match instruction {
@@ -80,19 +144,19 @@ impl Deck {
     }
 }
 
-fn parse(input: &str) -> Result<Vec<Instruction>, String> {
+fn parse<T: FromStr>(input: &str) -> Result<Vec<Instruction<T>>, String> {
     input.lines().map(|line| line.parse()).collect()
 }
 
 #[derive(Debug)]
-enum Instruction {
-    CutLeft(usize),
-    CutRight(usize),
-    DealWithIncrement(usize),
+enum Instruction<T: FromStr> {
+    CutLeft(T),
+    CutRight(T),
+    DealWithIncrement(T),
     DealIntoNewStack,
 }
 
-impl FromStr for Instruction {
+impl<T: FromStr> FromStr for Instruction<T> {
     type Err = String;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -101,7 +165,7 @@ impl FromStr for Instruction {
         let (prefix, number) = input
             .find(|c: char| c.is_ascii_digit())
             .map_or_else(|| (input, ""), |i| input.split_at(i));
-        let number: Option<usize> = if number == "" {
+        let number: Option<T> = if number == "" {
             None
         } else {
             number.parse().ok()
@@ -123,30 +187,51 @@ mod test {
 
     #[test]
     fn part1_instructions() {
-        let apply_instruction = |instruction: &Instruction| {
+        let apply_with_deck = |instruction: &Instruction<usize>| {
             let mut deck = Deck::new(10);
             deck.evaluate(instruction);
             deck.cards
         };
 
+        let apply_with_transform = |instruction: &Instruction<u64>| {
+            let cards: Vec<u64> = (0..10).map(|i| transform(instruction, i, 10)).collect();
+            cards
+        };
+
         assert_eq!(
             vec![9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
-            apply_instruction(&Instruction::DealIntoNewStack)
+            apply_with_deck(&Instruction::DealIntoNewStack)
+        );
+        assert_eq!(
+            vec![9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+            apply_with_transform(&Instruction::DealIntoNewStack)
         );
 
         assert_eq!(
             vec![3, 4, 5, 6, 7, 8, 9, 0, 1, 2],
-            apply_instruction(&Instruction::CutLeft(3))
+            apply_with_deck(&Instruction::CutLeft(3))
+        );
+        assert_eq!(
+            vec![3, 4, 5, 6, 7, 8, 9, 0, 1, 2],
+            apply_with_transform(&Instruction::CutLeft(3))
         );
 
         assert_eq!(
             vec![6, 7, 8, 9, 0, 1, 2, 3, 4, 5],
-            apply_instruction(&Instruction::CutRight(4))
+            apply_with_deck(&Instruction::CutRight(4))
+        );
+        assert_eq!(
+            vec![6, 7, 8, 9, 0, 1, 2, 3, 4, 5],
+            apply_with_transform(&Instruction::CutRight(4))
         );
 
         assert_eq!(
             vec![0, 7, 4, 1, 8, 5, 2, 9, 6, 3],
-            apply_instruction(&Instruction::DealWithIncrement(3))
+            apply_with_deck(&Instruction::DealWithIncrement(3))
+        );
+        assert_eq!(
+            vec![0, 7, 4, 1, 8, 5, 2, 9, 6, 3],
+            apply_with_transform(&Instruction::DealWithIncrement(3))
         );
     }
 
@@ -154,27 +239,38 @@ mod test {
     fn part1_examples() {
         assert_eq!(
             vec![0, 3, 6, 9, 2, 5, 8, 1, 4, 7],
-            evaluate_with_deck_size(&parse(include_str!("test1.txt")).unwrap(), 10)
+            deal_with_deck_size(&parse(include_str!("test1.txt")).unwrap(), 10)
         );
 
         assert_eq!(
             vec![3, 0, 7, 4, 1, 8, 5, 2, 9, 6],
-            evaluate_with_deck_size(&parse(include_str!("test2.txt")).unwrap(), 10)
+            deal_with_deck_size(&parse(include_str!("test2.txt")).unwrap(), 10)
         );
 
         assert_eq!(
             vec![6, 3, 0, 7, 4, 1, 8, 5, 2, 9],
-            evaluate_with_deck_size(&parse(include_str!("test3.txt")).unwrap(), 10)
+            deal_with_deck_size(&parse(include_str!("test3.txt")).unwrap(), 10)
         );
 
         assert_eq!(
             vec![9, 2, 5, 8, 1, 4, 7, 0, 3, 6],
-            evaluate_with_deck_size(&parse(include_str!("test4.txt")).unwrap(), 10)
+            deal_with_deck_size(&parse(include_str!("test4.txt")).unwrap(), 10)
         );
     }
 
     #[test]
+    #[ignore]
     fn part1_solution() {
         assert_eq!(Ok(6638), part1(include_str!("input.txt")));
+        assert_eq!(
+            Ok(2019),
+            card_at(&parse(include_str!("input.txt")).unwrap(), 6638, 10007, 1)
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn part2_solution() {
+        assert_eq!(Ok(0), part2(include_str!("input.txt")));
     }
 }
