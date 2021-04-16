@@ -27,7 +27,7 @@ fn cycle(map: u32) -> u32 {
                 .count();
 
             result |= match (bug_at(map, coord), adjacent_bugs) {
-                (_, 1) | (false, 2) => 1 << (coord.y * 5 + coord.x),
+                (_, 1) | (false, 2) => bit_for(coord),
                 _ => 0,
             };
         }
@@ -36,13 +36,17 @@ fn cycle(map: u32) -> u32 {
     result
 }
 
-fn bug_at(map: u32, coord: Coord) -> bool {
+fn bit_for(coord: Coord) -> u32 {
     let bit = coord.y * 5 + coord.x;
     if bit < 0 || bit >= 25 {
-        false
+        0
     } else {
-        map & (1 << bit) != 0
+        1 << (coord.y * 5 + coord.x)
     }
+}
+
+fn bug_at(map: u32, coord: Coord) -> bool {
+    map & bit_for(coord) != 0
 }
 
 fn print_map(map: u32) {
