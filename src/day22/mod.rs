@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::mem;
 use std::str::FromStr;
 
+use super::math;
+
 pub fn part1(input: &str) -> Result<u64, String> {
     let cards = deal_with_deck_size(&parse(input)?, 10007);
 
@@ -13,7 +15,39 @@ pub fn part1(input: &str) -> Result<u64, String> {
 }
 
 pub fn part2(input: &str) -> Result<u64, String> {
-    card_at(&parse(input)?, 2020, 119315717514047, 101741582076661)
+    // let instructions = parse(input)?;
+    let instructions = [Instruction::DealWithIncrement(38)];
+
+    const DECK_SIZE: u64 = 10007;
+
+    for shuffles in 1.. {
+        if shuffles % 1000 == 0 {
+            println!("{}", shuffles);
+        }
+        if let Ok(1) = card_at(&instructions, 1, DECK_SIZE, shuffles) {
+            let cards: Vec<u64> = (0..10)
+                .map(|i| card_at(&instructions, i, DECK_SIZE, shuffles).unwrap())
+                .collect();
+            println!("{} shuffles: {:?}", shuffles, cards);
+
+            return Ok(shuffles);
+        }
+    }
+    Err("Not found".to_string())
+
+    /*
+    let instructions = parse(input)?;
+    let deck_size = 119315717514047;
+    let shuffles = 101741582076661;
+
+    let period = instructions
+        .iter()
+        .fold(1, |acc, i| math::lcm(acc, i.get_period(deck_size) as i64));
+
+    println!("Period: {}", period);
+
+    card_at(&instructions, 2020, deck_size, shuffles)
+    */
 }
 
 fn deal_with_deck_size(instructions: &[Instruction<usize>], deck_size: u16) -> Vec<u16> {
@@ -32,7 +66,7 @@ fn card_at(
     deck_size: u64,
     shuffles: u64,
 ) -> Result<u64, String> {
-    let mut past_values = HashSet::new();
+    //let mut past_values = HashSet::new();
 
     if position < deck_size {
         Ok((0..shuffles).fold(position, |position, i| {
@@ -40,9 +74,12 @@ fn card_at(
                 transform(instruction, acc, deck_size)
             });
 
-            if !past_values.insert(result) {
-                println!("{} of {}: {}", i, shuffles, result);
+            let offset = (deck_size + position - result) % deck_size;
+            /*
+            if !past_values.insert(offset) {
+                println!("{} of {}: {}", i, shuffles, offset);
             }
+            */
             result
         }))
     } else {
@@ -156,6 +193,17 @@ enum Instruction<T: FromStr> {
     DealIntoNewStack,
 }
 
+impl Instruction<u64> {
+    fn get_period(&self, deck_size: u64) -> u64 {
+        match self {
+            Self::CutLeft(i) => deck_size / (math::gcd(deck_size as i64, *i as i64) as u64),
+            Self::CutRight(i) => deck_size / (math::gcd(deck_size as i64, *i as i64) as u64),
+            Self::DealWithIncrement(i) => *i,
+            Self::DealIntoNewStack => 2,
+        }
+    }
+}
+
 impl<T: FromStr> FromStr for Instruction<T> {
     type Err = String;
 
@@ -265,6 +313,31 @@ mod test {
         assert_eq!(
             Ok(2019),
             card_at(&parse(include_str!("input.txt")).unwrap(), 6638, 10007, 1)
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn part2_period() {
+        let instructions = [Instruction::DealWithIncrement(5)];
+        let expect_cards: Vec<u64> = (0..10).collect();
+
+        for shuffles in 1..=30 {
+            let cards: Vec<u64> = (0..10)
+                .map(|i| card_at(&instructions, i, 10007, shuffles).unwrap())
+                .collect();
+            println!("{} shuffles: {:?}", shuffles, cards);
+        }
+
+        let cards: Vec<u64> = (0..10)
+            .map(|i| card_at(&instructions, i, 10, 30).unwrap())
+            .collect();
+
+        assert_eq!(
+            expect_cards,
+            cards,
+            "Failed with period: {}",
+            instructions[0].get_period(10)
         );
     }
 
