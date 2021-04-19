@@ -1,18 +1,18 @@
+use std::collections::HashSet;
+
 use super::map::{Coord, CoordDiff};
 
 pub fn part1(input: &str) -> Result<u64, String> {
     let mut map = parse(input);
+    let mut states = HashSet::new();
 
-    println!("Initial state:");
-    print_map(map);
-
-    for i in 1..5 {
+    loop {
+        if !states.insert(map) {
+            print_map(map);
+            return Ok(map as u64);
+        }
         map = cycle(map);
-        println!("\nAfter {} minutes:", i);
-        print_map(map);
     }
-
-    Err("Not implemented".to_string())
 }
 
 fn cycle(map: u32) -> u32 {
@@ -23,7 +23,7 @@ fn cycle(map: u32) -> u32 {
             let coord = Coord { x, y };
             let adjacent_bugs = CoordDiff::DIRECTIONS
                 .iter()
-                .filter(|&&cd| bug_at(map, coord + cd))
+                .filter(|&&direction| bug_at(map, coord + direction))
                 .count();
 
             result |= match (bug_at(map, coord), adjacent_bugs) {
@@ -37,8 +37,7 @@ fn cycle(map: u32) -> u32 {
 }
 
 fn bit_for(coord: Coord) -> u32 {
-    let bit = coord.y * 5 + coord.x;
-    if bit < 0 || bit >= 25 {
+    if !(0..5).contains(&coord.y) || !(0..5).contains(&coord.x) {
         0
     } else {
         1 << (coord.y * 5 + coord.x)
@@ -71,4 +70,19 @@ fn parse(input: &str) -> u32 {
         .filter(|c| ['.', '#'].contains(c))
         .enumerate()
         .fold(0, |acc, (i, c)| if c == '#' { acc + (1 << i) } else { acc })
+}
+
+#[cfg(test)]
+mod test {
+    use super::part1;
+
+    #[test]
+    fn part1_examples() {
+        assert_eq!(Ok(2129920), part1(include_str!("test1.txt")));
+    }
+
+    #[test]
+    fn part1_solution() {
+        assert_eq!(Ok(18842609), part1(include_str!("input.txt")));
+    }
 }
