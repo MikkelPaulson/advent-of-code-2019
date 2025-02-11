@@ -112,6 +112,7 @@ impl Puzzle {
             (23, 1) => day23::part1(&input),
             (23, 2) => day23::part2(&input),
             (24, 1) => day24::part1(&input),
+            (24, 2) => day24::part2(&input),
             (25, 1) => day25::part1(&input),
             (day, part) => Err(format!(
                 "Day {} part {} has not yet been implemented.",
