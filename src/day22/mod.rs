@@ -13,11 +13,22 @@ pub fn part2(input: &str) -> Result<u64, String> {
 
     let deck_size = 119315717514047u64;
     let shuffles = 101741582076661u64;
+    let reversed_shuffles = deck_size - shuffles;
 
     let mut card_index = 2020;
-    let mut prev_card_index = 0;
 
-    //Ok(card_position(&instructions, 2020, deck_size))
+    for shuffle in 0..reversed_shuffles {
+        card_index = card_position(&instructions, card_index, deck_size);
+
+        if shuffle % 100000 == 0 {
+            eprintln!("Shuffle {shuffle} of {reversed_shuffles}: {card_index}",);
+        }
+    }
+
+    Ok(card_index)
+
+    /*
+    Ok(card_position(&instructions, 2020, deck_size))
 
     let mut known_positions = HashMap::new();
     for shuffle in 0..shuffles {
@@ -29,10 +40,11 @@ pub fn part2(input: &str) -> Result<u64, String> {
         }
         prev_card_index = card_index;
         card_index = card_at(&instructions, card_index, deck_size);
+
         if shuffle % 10000 == 0 {
             eprintln!(
                 "Shuffle {shuffle}: {card_index} (len: {})",
-                known_positions.len()
+                known_positions.len(),
             );
 
             known_positions
@@ -41,8 +53,7 @@ pub fn part2(input: &str) -> Result<u64, String> {
                 .for_each(|(k, v)| eprintln!("  {k}: {v}"));
         }
     }
-
-    todo!();
+    */
 }
 
 fn card_position(instructions: &[Instruction<u64>], card: u64, deck_size: u64) -> u64 {
@@ -93,28 +104,13 @@ impl Instruction<u64> {
             &Instruction::CutRight(i) if index < i => len - i + index,
             Instruction::CutRight(i) => index - i,
             &Instruction::DealWithIncrement(period) => {
-                // 4 % 3 has the same wrapping behaviour as 10 % 3, so run a mini model.
-                let model_target_index = index % period;
-                let model_skip = len / period;
-                let model_len = period + len % period;
-
-                let mut model_index = 0u64;
-                let mut model_result = 0u64;
-
-                loop {
-                    // A hit on this iteration!
-                    if model_target_index == model_index {
-                        break model_result + (index - model_target_index) / period;
-                    }
-
-                    model_index += period;
-                    model_result += model_skip;
-                    if model_index < model_len {
-                        model_index += period;
-                        model_result += 1;
-                    }
-                    model_index %= model_len;
-                }
+                // brute-force solution for card given index, period, and len
+                // index == card * period % len
+                (0..period)
+                    .map(|i| i * len + index)
+                    .find(|i| i % period == 0)
+                    .unwrap()
+                    / period
             }
             Instruction::DealIntoNewStack => len - index - 1,
         }
