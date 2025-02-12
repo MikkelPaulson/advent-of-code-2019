@@ -11,17 +11,25 @@ pub fn part1(input: &str) -> Result<u64, String> {
 pub fn part2(input: &str) -> Result<u64, String> {
     let instructions = parse(input)?;
 
-    let deck_size = 119315717514047u64;
-    let shuffles = 101741582076661u64;
-    let reversed_shuffles = deck_size - shuffles;
+    //let deck_size = 119315717514047u64;
+    let deck_size = 20021u64;
+    let shuffles = 20020u64;
+    //let reversed_shuffles = deck_size - shuffles;
+    let reversed_shuffles = shuffles;
 
     let mut card_index = 2020;
+    let mut visited = HashMap::new();
 
     for shuffle in 0..reversed_shuffles {
-        card_index = card_position(&instructions, card_index, deck_size);
+        if let Some(_prev) = visited.insert(card_index, shuffle) {
+            panic!("Repeated at {} after {} shuffles", card_index, shuffle);
+        }
+
+        //card_index = card_position(&instructions, card_index, deck_size);
+        card_index = card_at(&instructions, card_index, deck_size);
 
         if shuffle % 100000 == 0 {
-            eprintln!("Shuffle {shuffle} of {reversed_shuffles}: {card_index}",);
+            eprintln!("Shuffle {shuffle} of {reversed_shuffles}: {card_index}");
         }
     }
 
@@ -88,22 +96,18 @@ enum Instruction<T: FromStr> {
 impl Instruction<u64> {
     fn card_position(&self, card: u64, len: u64) -> u64 {
         match self {
-            &Instruction::CutLeft(i) if card < i => len - i + card,
-            Instruction::CutLeft(i) => card - i,
-            &Instruction::CutRight(i) if card >= len - i => card - (len - i),
-            Instruction::CutRight(i) => card + i,
-            &Instruction::DealWithIncrement(period) => card * period % len,
-            Instruction::DealIntoNewStack => len - card - 1,
+            Self::CutLeft(cut_size) => (card + len - cut_size) % len,
+            Self::CutRight(cut_size) => (card + cut_size) % len,
+            Self::DealWithIncrement(period) => card * period % len,
+            Self::DealIntoNewStack => len - card - 1,
         }
     }
 
     fn card_at(&self, index: u64, len: u64) -> u64 {
         match self {
-            &Instruction::CutLeft(i) if index >= len - i => index - (len - i),
-            Instruction::CutLeft(i) => index + i,
-            &Instruction::CutRight(i) if index < i => len - i + index,
-            Instruction::CutRight(i) => index - i,
-            &Instruction::DealWithIncrement(period) => {
+            &Self::CutLeft(cut_size) => (index + cut_size) % len,
+            &Self::CutRight(cut_size) => (index + len - cut_size) % len,
+            &Self::DealWithIncrement(period) => {
                 // brute-force solution for card given index, period, and len
                 // index == card * period % len
                 (0..period)
@@ -112,7 +116,7 @@ impl Instruction<u64> {
                     .unwrap()
                     / period
             }
-            Instruction::DealIntoNewStack => len - index - 1,
+            Self::DealIntoNewStack => len - index - 1,
         }
     }
 }
@@ -300,5 +304,22 @@ mod test {
     fn part2_solution() {
         assert!(part2(include_str!("input.txt")).unwrap() > 53660045266244);
         //assert_eq!(Ok(0), part2(include_str!("input.txt")));
+    }
+
+    #[test]
+    fn loops_on_prime_numbers() {
+        let instructions = parse(include_str!("input.txt")).unwrap();
+        let mut unvisited: std::collections::HashSet<u64> = (0..20021).collect();
+
+        assert_eq!(
+            19863,
+            (0..4004).fold(19863, |card, i| {
+                eprintln!("{i}: {card}");
+                unvisited.take(&card).unwrap();
+                card_position(&instructions, card, 20021)
+            }),
+        );
+
+        //assert_eq!(std::collections::HashSet::new(), unvisited);
     }
 }
