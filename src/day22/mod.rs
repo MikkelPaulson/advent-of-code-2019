@@ -1,37 +1,33 @@
-use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
 pub fn part1(input: &str) -> Result<u64, String> {
-    let instructions = parse(input)?;
+    let instructions = fold(parse(input)?);
 
     Ok(card_position(&instructions, 2019, 10007) as u64)
 }
 
 pub fn part2(input: &str) -> Result<u64, String> {
-    let instructions = parse(input)?;
+    let instructions = fold(parse(input)?);
 
-    //let deck_size = 119315717514047i64;
-    let deck_size = 20021i64;
-    let shuffles = 20020i64;
-    //let reversed_shuffles = deck_size - shuffles;
-    let reversed_shuffles = shuffles;
+    let deck_size = 119315717514047i64;
+    //let deck_size = 20021i64;
+    let shuffles = 101741582076661i64;
+    let reversed_shuffles = deck_size - shuffles - 1;
+    //let reversed_shuffles = shuffles;
 
     let mut card_index = 2020;
-    let mut visited = HashMap::new();
 
     for shuffle in 0..reversed_shuffles {
-        if let Some(_prev) = visited.insert(card_index, shuffle) {
-            panic!("Repeated at {} after {} shuffles", card_index, shuffle);
+        if shuffle % 1000000 == 0 {
+            eprintln!(
+                "Shuffle {shuffle} of {reversed_shuffles} ({}%): {card_index} ({}%)",
+                shuffle * 100 / reversed_shuffles,
+                card_index * 100 / deck_size,
+            );
         }
 
         card_index = card_position(&instructions, card_index, deck_size);
-        //card_index = card_at(&instructions, card_index, deck_size);
-
-        if shuffle % 100000 == 0 {
-            eprintln!("Shuffle {shuffle} of {reversed_shuffles}: {card_index}");
-        }
     }
 
     Ok(card_index as u64)
@@ -90,8 +86,7 @@ fn parse(input: &str) -> Result<Vec<Instruction>, String> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Instruction {
     Noop,
-    CutLeft(i64),
-    CutRight(i64),
+    Cut(i64),
     DealWithIncrement(i64),
     DealAndCut(i64, i64),
     DealIntoNewStack,
@@ -100,10 +95,9 @@ enum Instruction {
 impl Instruction {
     fn card_position(&self, card: i64, len: i64) -> i64 {
         match self {
-            Self::CutLeft(cut_size) => (card + len - cut_size) % len,
-            Self::CutRight(cut_size) => (card + cut_size) % len,
-            Self::DealWithIncrement(period) => card * period % len,
-            Self::DealAndCut(period, cut_size) => (card * period + cut_size) % len,
+            Self::Cut(cut_size) => (card - cut_size).rem_euclid(len),
+            Self::DealWithIncrement(period) => (card * period).rem_euclid(len),
+            Self::DealAndCut(period, cut_size) => (card * period - cut_size).rem_euclid(len),
             Self::DealIntoNewStack => len - card - 1,
             Self::Noop => card,
         }
@@ -112,8 +106,8 @@ impl Instruction {
     /*
     fn card_at(&self, index: i64, len: i64) -> i64 {
         match self {
-            &Self::CutLeft(cut_size) => (index + cut_size) % len,
-            &Self::CutRight(cut_size) => (index + len - cut_size) % len,
+            &Self::Cut(cut_size) => (index + cut_size) % len,
+            &Self::Cut(-cut_size) => (index + len - cut_size) % len,
             &Self::DealWithIncrement(period) => {
                 // brute-force solution for card given index, period, and len
                 // index == card * period % len
@@ -130,42 +124,34 @@ impl Instruction {
     */
 
     /// Fold combinations:
-    /// * [x] (CutLeft, CutLeft)
-    /// * [x] (CutLeft, CutRight)
-    /// * [ ] (CutLeft, DealWithIncrement)
-    /// * [ ] (CutLeft, DealIntoNewStack)
-    /// * [x] (CutRight, CutLeft)
-    /// * [x] (CutRight, CutRight)
-    /// * [ ] (CutRight, DealWithIncrement)
-    /// * [ ] (CutRight, DealIntoNewStack)
-    /// * [ ] (DealWithIncrement, CutLeft)
-    /// * [ ] (DealWithIncrement, CutRight)
+    /// * [x] (Cut, Cut)
+    /// * [ ] (Cut, DealWithIncrement)
+    /// * [ ] (Cut, DealAndCut)
+    /// * [ ] (Cut, DealIntoNewStack)
+    /// * [x] (DealWithIncrement, Cut)
     /// * [x] (DealWithIncrement, DealWithIncrement)
+    /// * [ ] (DealWithIncrement, DealAndCut)
     /// * [ ] (DealWithIncrement, DealIntoNewStack)
-    /// * [ ] (DealIntoNewStack, CutLeft)
-    /// * [ ] (DealIntoNewStack, CutRight)
+    /// * [ ] (DealIntoNewStack, Cut)
     /// * [ ] (DealIntoNewStack, DealWithIncrement)
+    /// * [ ] (DealIntoNewStack, DealAndCut)
     /// * [x] (DealIntoNewStack, DealIntoNewStack)
     fn fold(self, other: Self) -> (Self, Option<Self>) {
         (
             match (self, other) {
-                (Self::CutLeft(a), Self::CutLeft(b)) => Self::CutLeft(a + b),
-                (Self::CutRight(a), Self::CutRight(b)) => Self::CutRight(a + b),
-                (Self::CutLeft(a), Self::CutRight(b)) | (Self::CutRight(b), Self::CutLeft(a)) => {
-                    match a.cmp(&b) {
-                        Ordering::Less => Self::CutRight(b - a),
-                        Ordering::Equal => Self::Noop,
-                        Ordering::Greater => Self::CutLeft(a - b),
-                    }
-                }
+                (Self::Cut(a), Self::Cut(b)) if a == b => Self::Noop,
+                (Self::Cut(a), Self::Cut(b)) => Self::Cut(a + b),
+                (Self::DealWithIncrement(a), Self::Cut(b)) => Self::DealAndCut(a, b),
                 (Self::DealWithIncrement(a), Self::DealWithIncrement(b)) => {
                     Self::DealWithIncrement(a * b)
                 }
-                (Self::DealIntoNewStack, Self::CutLeft(a)) => {
-                    return (Self::CutRight(a), Some(Self::DealIntoNewStack))
+                (Self::DealWithIncrement(a), Self::DealAndCut(b, c)) => Self::DealAndCut(a * b, c),
+                (Self::DealAndCut(a, b), Self::Cut(c)) => Self::DealAndCut(a, b + c),
+                (Self::DealIntoNewStack, Self::Cut(a)) => {
+                    return (Self::Cut(-a), Some(Self::DealIntoNewStack));
                 }
-                (Self::DealIntoNewStack, Self::CutRight(a)) => {
-                    return (Self::CutLeft(a), Some(Self::DealIntoNewStack))
+                (Self::DealIntoNewStack, Self::DealWithIncrement(a)) => {
+                    return (Self::DealAndCut(-a, a), None);
                 }
                 (Self::DealIntoNewStack, Self::DealIntoNewStack) => Self::Noop,
                 (Self::Noop, a) | (a, Self::Noop) => a,
@@ -183,7 +169,7 @@ impl FromStr for Instruction {
         let input = input.trim_end();
 
         let (prefix, number) = input
-            .find(|c: char| c.is_ascii_digit())
+            .find(|c: char| c.is_ascii_digit() || c == '-')
             .map_or_else(|| (input, ""), |i| input.split_at(i));
         let number: Option<i64> = if number == "" {
             None
@@ -192,8 +178,7 @@ impl FromStr for Instruction {
         };
 
         match (prefix, number) {
-            ("cut -", Some(i)) => Ok(Self::CutRight(i)),
-            ("cut ", Some(i)) => Ok(Self::CutLeft(i)),
+            ("cut ", Some(i)) => Ok(Self::Cut(i)),
             ("deal with increment ", Some(i)) => Ok(Self::DealWithIncrement(i)),
             ("deal into new stack", None) => Ok(Self::DealIntoNewStack),
             _ => Err(format!("Invalid input: {:?}", input)),
@@ -204,8 +189,7 @@ impl FromStr for Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
-            Self::CutLeft(i) | Self::DealAndCut(1, i) => write!(f, "cut {i}"),
-            Self::CutRight(i) => write!(f, "cut -{i}"),
+            Self::Cut(i) | Self::DealAndCut(1, i) => write!(f, "cut {i}"),
             Self::DealWithIncrement(i) | Self::DealAndCut(i, 0) => {
                 write!(f, "deal with increment {i}")
             }
@@ -235,17 +219,22 @@ mod test {
 
         assert_eq!(
             vec![3, 4, 5, 6, 7, 8, 9, 0, 1, 2],
-            deck_from_positions(&[Instruction::CutLeft(3)])
+            deck_from_positions(&[Instruction::Cut(3)])
         );
 
         assert_eq!(
             vec![6, 7, 8, 9, 0, 1, 2, 3, 4, 5],
-            deck_from_positions(&[Instruction::CutRight(4)])
+            deck_from_positions(&[Instruction::Cut(-4)])
         );
 
         assert_eq!(
             vec![0, 7, 4, 1, 8, 5, 2, 9, 6, 3],
             deck_from_positions(&[Instruction::DealWithIncrement(3)])
+        );
+
+        assert_eq!(
+            vec![9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+            deck_from_positions(&[Instruction::DealAndCut(-1, 1)])
         );
     }
 
@@ -389,35 +378,24 @@ mod test {
     }
 
     /// Fold combinations:
-    /// * [x] (CutLeft, CutLeft)
-    /// * [x] (CutLeft, CutRight)
-    /// * [ ] (CutLeft, DealWithIncrement)
-    /// * [ ] (CutLeft, DealIntoNewStack)
-    /// * [x] (CutRight, CutLeft)
-    /// * [x] (CutRight, CutRight)
-    /// * [ ] (CutRight, DealWithIncrement)
-    /// * [ ] (CutRight, DealIntoNewStack)
-    /// * [ ] (DealWithIncrement, CutLeft)
-    /// * [ ] (DealWithIncrement, CutRight)
+    /// * [x] (Cut, Cut)
+    /// * [ ] (Cut, DealWithIncrement)
+    /// * [ ] (Cut, DealIntoNewStack)
+    /// * [ ] (DealWithIncrement, Cut)
     /// * [x] (DealWithIncrement, DealWithIncrement)
     /// * [ ] (DealWithIncrement, DealIntoNewStack)
-    /// * [ ] (DealIntoNewStack, CutLeft)
-    /// * [ ] (DealIntoNewStack, CutRight)
+    /// * [ ] (DealIntoNewStack, Cut)
     /// * [ ] (DealIntoNewStack, DealWithIncrement)
     /// * [x] (DealIntoNewStack, DealIntoNewStack)
     #[test]
     fn individual_fold_test() {
+        const LEN: i64 = 23;
+
         let instructions = &[
-            [Instruction::CutLeft(2), Instruction::CutLeft(5)],
-            [Instruction::CutLeft(2), Instruction::CutRight(5)],
-            [Instruction::CutLeft(2), Instruction::DealWithIncrement(8)],
-            [Instruction::CutLeft(2), Instruction::DealIntoNewStack],
-            [Instruction::CutRight(2), Instruction::CutLeft(5)],
-            [Instruction::CutRight(2), Instruction::CutRight(5)],
-            [Instruction::CutRight(2), Instruction::DealWithIncrement(8)],
-            [Instruction::CutRight(2), Instruction::DealIntoNewStack],
-            [Instruction::DealWithIncrement(10), Instruction::CutLeft(5)],
-            [Instruction::DealWithIncrement(10), Instruction::CutRight(5)],
+            [Instruction::Cut(2), Instruction::Cut(-5)],
+            [Instruction::Cut(2), Instruction::DealWithIncrement(8)],
+            [Instruction::Cut(2), Instruction::DealIntoNewStack],
+            [Instruction::DealWithIncrement(10), Instruction::Cut(-5)],
             [
                 Instruction::DealWithIncrement(10),
                 Instruction::DealWithIncrement(8),
@@ -426,8 +404,7 @@ mod test {
                 Instruction::DealWithIncrement(10),
                 Instruction::DealIntoNewStack,
             ],
-            [Instruction::DealIntoNewStack, Instruction::CutLeft(5)],
-            [Instruction::DealIntoNewStack, Instruction::CutRight(5)],
+            [Instruction::DealIntoNewStack, Instruction::Cut(-5)],
             [
                 Instruction::DealIntoNewStack,
                 Instruction::DealWithIncrement(8),
@@ -436,21 +413,21 @@ mod test {
         ][..];
 
         for instruction in instructions {
-            let sequential_output: Vec<_> = (0..23)
-                .map(|i| instruction[1].card_position(instruction[0].card_position(i, 23), 23))
+            let sequential_output: Vec<_> = (0..LEN)
+                .map(|i| instruction[1].card_position(instruction[0].card_position(i, LEN), LEN))
                 .collect();
 
             let (combined_instruction, combined_output): (String, Vec<_>) =
                 match instruction[0].clone().fold(instruction[1].clone()) {
                     (a, Some(b)) => (
                         format!("({a}, {b})"),
-                        (0..23)
-                            .map(|i| b.card_position(a.card_position(i, 23), 23))
+                        (0..LEN)
+                            .map(|i| b.card_position(a.card_position(i, LEN), LEN))
                             .collect(),
                     ),
                     (a, None) => (
                         format!("{a}"),
-                        (0..23).map(|i| a.card_position(i, 23)).collect(),
+                        (0..LEN).map(|i| a.card_position(i, LEN)).collect(),
                     ),
                 };
 
@@ -464,6 +441,8 @@ mod test {
 
     #[test]
     fn part1_fold_test() {
+        const LEN: i64 = 10007;
+
         let instructions = parse(include_str!("input.txt")).unwrap();
         let folded_instructions = fold(instructions.clone());
 
@@ -481,7 +460,8 @@ mod test {
             }
         }
 
+        assert_eq!(6638, card_position(&instructions, 2019, LEN));
+        assert_eq!(6638, card_position(&folded_instructions, 2019, LEN));
         panic!();
-        assert_eq!(6638, card_position(&instructions, 2019, 10007));
     }
 }
