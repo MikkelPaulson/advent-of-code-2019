@@ -10,33 +10,31 @@ pub fn part1(input: &str) -> Result<u64, String> {
 pub fn part2(input: &str) -> Result<u64, String> {
     let instructions = fold(parse(input)?);
 
-    let deck_size = 119315717514047i64;
-    //let deck_size = 20021i64;
-    let shuffles = 101741582076661i64;
-    let reversed_shuffles = deck_size - shuffles - 1;
-    //let reversed_shuffles = shuffles;
+    let deck_len = 119_315_717_514_047i64;
+    let shuffles = 101_741_582_076_661i64;
+    let reversed_shuffles = deck_len - shuffles - 1;
 
     let mut card_index = 2020;
 
     for shuffle in 0..reversed_shuffles {
-        if shuffle % 1000000 == 0 {
+        if shuffle % 1_000_000 == 0 {
             eprintln!(
                 "Shuffle {shuffle} of {reversed_shuffles} ({}%): {card_index} ({}%)",
                 shuffle * 100 / reversed_shuffles,
-                card_index * 100 / deck_size,
+                card_index * 100 / deck_len,
             );
         }
 
-        card_index = card_position(&instructions, card_index, deck_size);
+        card_index = card_position(&instructions, card_index, deck_len);
     }
 
     Ok(card_index as u64)
 }
 
-fn card_position(instructions: &[Instruction], card: i64, deck_size: i64) -> i64 {
-    assert!(card < deck_size, "No card of value {} in deck", card);
+fn card_position(instructions: &[Instruction], card: i64, deck_len: i64) -> i64 {
+    assert!(card < deck_len, "No card of value {} in deck", card);
     instructions.into_iter().fold(card, |card, instruction| {
-        instruction.card_position(card, deck_size)
+        instruction.card_position(card, deck_len)
     })
 }
 
@@ -123,19 +121,6 @@ impl Instruction {
     }
     */
 
-    /// Fold combinations:
-    /// * [x] (Cut, Cut)
-    /// * [ ] (Cut, DealWithIncrement)
-    /// * [ ] (Cut, DealAndCut)
-    /// * [ ] (Cut, DealIntoNewStack)
-    /// * [x] (DealWithIncrement, Cut)
-    /// * [x] (DealWithIncrement, DealWithIncrement)
-    /// * [ ] (DealWithIncrement, DealAndCut)
-    /// * [ ] (DealWithIncrement, DealIntoNewStack)
-    /// * [ ] (DealIntoNewStack, Cut)
-    /// * [ ] (DealIntoNewStack, DealWithIncrement)
-    /// * [ ] (DealIntoNewStack, DealAndCut)
-    /// * [x] (DealIntoNewStack, DealIntoNewStack)
     fn fold(self, other: Self) -> (Self, Option<Self>) {
         (
             match (self, other) {
@@ -378,15 +363,15 @@ mod test {
     }
 
     /// Fold combinations:
-    /// * [x] (Cut, Cut)
-    /// * [ ] (Cut, DealWithIncrement)
-    /// * [ ] (Cut, DealIntoNewStack)
-    /// * [ ] (DealWithIncrement, Cut)
-    /// * [x] (DealWithIncrement, DealWithIncrement)
-    /// * [ ] (DealWithIncrement, DealIntoNewStack)
-    /// * [ ] (DealIntoNewStack, Cut)
-    /// * [ ] (DealIntoNewStack, DealWithIncrement)
-    /// * [x] (DealIntoNewStack, DealIntoNewStack)
+    /// * (Cut, Cut)
+    /// * (Cut, DealWithIncrement)
+    /// * (Cut, DealIntoNewStack)
+    /// * (DealWithIncrement, Cut)
+    /// * (DealWithIncrement, DealWithIncrement)
+    /// * (DealWithIncrement, DealIntoNewStack)
+    /// * (DealIntoNewStack, Cut)
+    /// * (DealIntoNewStack, DealWithIncrement)
+    /// * (DealIntoNewStack, DealIntoNewStack)
     #[test]
     fn individual_fold_test() {
         const LEN: i64 = 23;
