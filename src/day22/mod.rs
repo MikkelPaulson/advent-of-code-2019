@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 pub fn part1(input: &str) -> Result<u64, String> {
-    let deck_len = 10007i64;
+    let deck_len = 10007i128;
 
     let instructions = parse(input)?;
 
@@ -10,46 +10,31 @@ pub fn part1(input: &str) -> Result<u64, String> {
 }
 
 pub fn part2(input: &str) -> Result<u64, String> {
-    let deck_len = 119_315_717_514_047i64;
-    let shuffles = 101_741_582_076_661i64;
-    let reversed_shuffles = deck_len - shuffles - 1;
+    const DECK_LEN: u128 = 119_315_717_514_047;
+    const SHUFFLES: u128 = 101_741_582_076_661;
+    const REVERSED_SHUFFLES: u128 = DECK_LEN - SHUFFLES - 1;
+    const CARD_INDEX: u128 = 2020;
 
-    let instruction = fold(parse(input)?, deck_len);
+    let instruction = fold(parse(input)?, DECK_LEN as i128);
 
-    let mut card_index = 2020;
-
-    for shuffle in 0..reversed_shuffles {
-        if shuffle % 1_000_000 == 0 {
-            eprintln!(
-                "Shuffle {shuffle} of {reversed_shuffles} ({}%): {card_index} ({}%)",
-                shuffle * 100 / reversed_shuffles,
-                card_index * 100 / deck_len,
-            );
-        }
-
-        card_index = card_position_single(&instruction, card_index, deck_len);
-    }
+    let card_index =
+        instruction.card_position_n(CARD_INDEX as i128, DECK_LEN as i128, REVERSED_SHUFFLES);
 
     Ok(card_index as u64)
 }
 
-fn card_position(instructions: &[Instruction], card: i64, deck_len: i64) -> i64 {
+fn card_position(instructions: &[Instruction], card: i128, deck_len: i128) -> i128 {
     assert!(card < deck_len, "No card of value {} in deck", card);
     instructions.into_iter().fold(card, |card, instruction| {
         instruction.card_position(card, deck_len)
     })
 }
 
-fn card_position_single(instruction: &DealAndCut, card: i64, deck_len: i64) -> i64 {
-    assert!(card < deck_len, "No card of value {} in deck", card);
-    instruction.card_position(card, deck_len)
-}
-
-fn fold(instructions: Vec<Instruction>, len: i64) -> DealAndCut {
+fn fold(instructions: Vec<Instruction>, len: i128) -> DealAndCut {
     instructions
         .into_iter()
         .fold(DealAndCut::default(), |acc, instruction| {
-            acc.combine(instruction.into(), len)
+            acc.combine(&instruction.into(), len)
         })
 }
 
@@ -59,19 +44,19 @@ fn parse(input: &str) -> Result<Vec<Instruction>, String> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct DealAndCut {
-    times: i64,
-    plus: i64,
+    times: i128,
+    plus: i128,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Instruction {
-    Cut(i64),
-    DealWithIncrement(i64),
+    Cut(i128),
+    DealWithIncrement(i128),
     DealIntoNewStack,
 }
 
 impl Instruction {
-    fn card_position(&self, card: i64, len: i64) -> i64 {
+    fn card_position(&self, card: i128, len: i128) -> i128 {
         match self {
             Self::Cut(cut_size) => (card - cut_size).rem_euclid(len),
             Self::DealWithIncrement(period) => (card * period).rem_euclid(len),
@@ -91,15 +76,42 @@ impl From<Instruction> for DealAndCut {
 }
 
 impl DealAndCut {
-    fn combine(self, other: Self, len: i64) -> Self {
+    fn combine(&self, other: &Self, len: i128) -> Self {
         Self {
             times: (self.times * other.times) % len,
-            plus: (self.plus * other.times) % len + other.plus,
+            plus: (self.plus * other.times + other.plus) % len,
         }
     }
 
-    fn card_position(&self, card: i64, len: i64) -> i64 {
+    fn double(&self, len: i128) -> Self {
+        self.combine(self, len)
+    }
+
+    fn card_position(&self, card: i128, len: i128) -> i128 {
         (card * self.times - self.plus).rem_euclid(len)
+    }
+
+    fn card_position_n(&self, card: i128, len: i128, iterations: u128) -> i128 {
+        if iterations == 1 {
+            return self.card_position(card, len);
+        }
+
+        let max_bit = iterations.ilog2() as usize;
+        let mut memo = Vec::with_capacity(max_bit as usize + 1);
+        memo.push(self.clone());
+        (1..=max_bit).for_each(|_| memo.push(memo.last().unwrap().double(len)));
+
+        eprintln!("iterations: {iterations} ({iterations:b})");
+        eprintln!("max_bit: {max_bit}");
+
+        (0..=max_bit)
+            .filter(|i| iterations & 1 << i != 0)
+            .map(|i| (i, &memo[i]))
+            .inspect(|(i, instruction)| eprintln!("Bit {i}: {instruction}"))
+            .fold(DealAndCut::default(), |acc, (_, instruction)| {
+                acc.combine(&instruction, len)
+            })
+            .card_position(card, len)
     }
 }
 
@@ -118,7 +130,7 @@ impl FromStr for Instruction {
         let (prefix, number) = input
             .find(|c: char| c.is_ascii_digit() || c == '-')
             .map_or_else(|| (input, ""), |i| input.split_at(i));
-        let number: Option<i64> = if number == "" {
+        let number: Option<i128> = if number == "" {
             None
         } else {
             number.parse().ok()
@@ -157,8 +169,8 @@ impl fmt::Display for DealAndCut {
 mod test {
     use super::*;
 
-    fn deck_from_positions(instructions: &[Instruction]) -> Vec<i64> {
-        let mut deck: Vec<i64> = std::iter::repeat(0).take(10).collect();
+    fn deck_from_positions(instructions: &[Instruction]) -> Vec<i128> {
+        let mut deck: Vec<i128> = std::iter::repeat(0).take(10).collect();
         (0..10).for_each(|i| deck[card_position(instructions, i, 10) as usize] = i);
         deck
     }
@@ -218,12 +230,13 @@ mod test {
     #[ignore]
     fn part2_solution() {
         assert!(part2(include_str!("input.txt")).unwrap() > 53660045266244);
+        assert!(part2(include_str!("input.txt")).unwrap() < 90739407010994);
     }
 
     #[test]
     fn loops_on_prime_numbers() {
         let instructions = parse(include_str!("input.txt")).unwrap();
-        let mut unvisited: std::collections::HashSet<i64> = (0..20021).collect();
+        let mut unvisited: std::collections::HashSet<i128> = (0..20021).collect();
 
         assert_eq!(
             19863,
@@ -249,7 +262,7 @@ mod test {
     /// * (DealIntoNewStack, DealIntoNewStack)
     #[test]
     fn individual_fold_test() {
-        const LEN: i64 = 23;
+        const LEN: i128 = 23;
 
         let instructions = &[
             [Instruction::Cut(2), Instruction::Cut(-5)],
@@ -296,12 +309,33 @@ mod test {
 
     #[test]
     fn part1_fold_test() {
-        const LEN: i64 = 10007;
+        const LEN: i128 = 10007;
 
         let instructions = parse(include_str!("input.txt")).unwrap();
-        let folded_instructions = fold(instructions.clone(), LEN);
+        let folded_instruction = fold(instructions.clone(), LEN);
 
         assert_eq!(6638, card_position(&instructions, 2019, LEN));
-        assert_eq!(6638, card_position_single(&folded_instructions, 2019, LEN));
+        assert_eq!(6638, folded_instruction.card_position(2019, LEN));
+    }
+
+    #[test]
+    fn deal_and_cut_default_test() {
+        const LEN: i128 = 10007;
+
+        assert_eq!(2019, DealAndCut::default().card_position(2019, LEN));
+    }
+
+    #[test]
+    fn card_position_n_test() {
+        const LEN: i128 = 10007;
+
+        let instruction = fold(parse(include_str!("input.txt")).unwrap(), LEN);
+
+        let mut value = 2020;
+
+        for i in 1..10 {
+            value = instruction.card_position(value, LEN);
+            assert_eq!(value, instruction.card_position_n(2020, LEN, i), "{}", i);
+        }
     }
 }
